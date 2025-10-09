@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "518377983821",
+    "project_id": "synwc-98128",
+    "storage_bucket": "synwc-98128.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:518377983821:android:47d9f55517763c8166f104",
+        "android_client_info": {
+          "package_name": "edu.bluejack25_1.synwc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdykh73r5IKRb6l5hIUZFyrI_lCDR22KE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

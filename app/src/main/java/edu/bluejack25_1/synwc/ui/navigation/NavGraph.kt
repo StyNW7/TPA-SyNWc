@@ -5,6 +5,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import edu.bluejack25_1.synwc.ui.screen.onboarding.OnboardingScreen
+import edu.bluejack25_1.synwc.ui.screen.auth.LoginScreen
+import edu.bluejack25_1.synwc.ui.screen.auth.RegisterScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -18,5 +20,12 @@ fun AppNavGraph(navController: NavHostController) {
                 onGetStartedClick = { navController.navigate("login") }
             )
         }
+        composable("login") {
+            LoginScreen(navController = navController)
+        }
+        composable("register") {
+            RegisterScreen(navController = navController)
+        }
+        composable("home") { /* TODO: your home screen */ }
     }
 }
