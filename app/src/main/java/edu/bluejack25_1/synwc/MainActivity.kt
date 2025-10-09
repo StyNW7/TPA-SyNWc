@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SyNWcTheme { // will automatically detect dark/light
+            SyNWcTheme {
                 Surface(
                     color = MaterialTheme.colorScheme.background
                 ) {

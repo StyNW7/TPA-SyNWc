@@ -1,26 +1,48 @@
 package edu.bluejack25_1.synwc.ui.screen.onboarding
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+
+data class OnboardingPage(
+    val imageRes: Int,
+    val title: String,
+    val description: String
+)
 
 class OnboardingViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(OnboardingUiState())
-    val uiState: StateFlow<OnboardingUiState> = _uiState
+    private val pages = listOf(
+        OnboardingPage(
+            imageRes = edu.bluejack25_1.synwc.R.drawable.ic_book,
+            title = "Simple & Minimalist To-do List",
+            description = "Write down all your tasks on your to-do list."
+        ),
+        OnboardingPage(
+            imageRes = edu.bluejack25_1.synwc.R.drawable.ic_message,
+            title = "Daily Quotes for Inspiration",
+            description = "Get fresh motivational quotes every day."
+        ),
+        OnboardingPage(
+            imageRes = edu.bluejack25_1.synwc.R.drawable.ic_quote,
+            title = "Reflect & Grow",
+            description = "Write reflections and track your daily progress."
+        )
+    )
 
-    fun onGetStarted() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            // Future: Save onboarding completion to local (DataStore)
-            kotlinx.coroutines.delay(500)
-            _uiState.value = _uiState.value.copy(isLoading = false)
+    private val _currentPage = MutableStateFlow(0)
+    val currentPage: StateFlow<Int> = _currentPage
+
+    fun nextPage() {
+        if (_currentPage.value < pages.lastIndex) {
+            _currentPage.value += 1
         }
     }
-}
 
-data class OnboardingUiState(
-    val isLoading: Boolean = false
-)
+    fun skipToEnd() {
+        _currentPage.value = pages.lastIndex
+    }
+
+    fun getPageData(index: Int): OnboardingPage = pages[index]
+    fun getTotalPages(): Int = pages.size
+}

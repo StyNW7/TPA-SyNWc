@@ -52,6 +52,8 @@ dependencies {
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.google.accompanist.pager)
+    implementation(libs.google.accompanist.pager.indicators)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

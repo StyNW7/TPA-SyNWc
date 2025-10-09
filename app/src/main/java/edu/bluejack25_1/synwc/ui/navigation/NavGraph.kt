@@ -14,6 +14,7 @@ fun AppNavGraph(navController: NavHostController) {
     ) {
         composable("onboarding") {
             OnboardingScreen(
+                navController = navController,
                 onGetStartedClick = { navController.navigate("login") }
             )
         }

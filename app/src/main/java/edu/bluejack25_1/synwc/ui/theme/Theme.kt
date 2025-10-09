@@ -28,13 +28,12 @@ private val DarkColorScheme = darkColorScheme(
 @Composable
 fun SyNWcTheme(
 //    darkTheme: Boolean = isSystemInDarkTheme(), // auto follows system setting
-    darkTheme: Boolean = false, // auto follows system setting
-    dynamicColor: Boolean = false, // set to true if you want Android 12+ dynamic colors
+    darkTheme: Boolean = false, // default light theme
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    // Optional: Make status bar match the theme color
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {

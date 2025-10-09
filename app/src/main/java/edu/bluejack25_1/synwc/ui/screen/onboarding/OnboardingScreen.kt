@@ -1,73 +1,173 @@
 package edu.bluejack25_1.synwc.ui.screen.onboarding
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph
+import com.google.accompanist.pager.*
 import edu.bluejack25_1.synwc.R
 
+@OptIn(ExperimentalPagerApi::class)
 @Composable
 fun OnboardingScreen(
-    viewModel: OnboardingViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    onGetStartedClick: () -> Unit
+    navController: NavController,
+    viewModel: OnboardingViewModel = viewModel(),
+    onGetStartedClick: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val pagerState = rememberPagerState()
+    val totalPages = viewModel.getTotalPages()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(24.dp)
-        ) {
-            Spacer(modifier = Modifier.height(60.dp))
-            Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with your illustration
-                contentDescription = "Onboarding Image",
-                modifier = Modifier.size(200.dp)
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                text = "Welcome to SyNWc 🌿",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Your daily space for self-love, reflection, and productivity.",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
-            Button(
-                onClick = {
-                    viewModel.onGetStarted()
-                    onGetStartedClick()
-                },
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !uiState.isLoading
+        // Image Pager
+        HorizontalPager(
+            count = totalPages,
+            state = pagerState,
+            modifier = Modifier.weight(1f)
+        ) { page ->
+            val data = viewModel.getPageData(page)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
             ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Get Started", fontSize = 18.sp)
+                Image(
+                    painter = painterResource(id = data.imageRes),
+                    contentDescription = data.title,
+                    modifier = Modifier
+                        .size(180.dp)
+                        .padding(16.dp)
+                )
+            }
+        }
+
+        // Bottom Card
+        Surface(
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(250.dp)
+        ) {
+            val currentPage = pagerState.currentPage
+            val pageData = viewModel.getPageData(currentPage)
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxSize()
+            ) {
+                // Page Indicators
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    repeat(totalPages) { index ->
+                        val isSelected = index == currentPage
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .size(if (isSelected) 10.dp else 8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
+                                )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Title
+                Text(
+                    text = pageData.title,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Description
+                Text(
+                    text = pageData.description,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = {
+                        if (pagerState.currentPage == totalPages - 1) {
+                            onGetStartedClick()
+                        } else {
+                            viewModel.skipToEnd()
+                        }
+                    }) {
+                        Text(
+                            text = "Skip",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    val currentPage by viewModel.currentPage.collectAsState()
+
+                    LaunchedEffect(currentPage) {
+                        pagerState.animateScrollToPage(currentPage)
+                    }
+
+                    Button(
+                        onClick = {
+                            if (pagerState.currentPage < totalPages - 1) {
+                                viewModel.nextPage()
+                            } else {
+                                viewModel.skipToEnd()
+                            }
+                        },
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_arrow_right),
+                            contentDescription = "Next",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+
+                    }
                 }
             }
         }
