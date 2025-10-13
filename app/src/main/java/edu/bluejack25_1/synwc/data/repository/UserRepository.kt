@@ -1,34 +1,29 @@
 package edu.bluejack25_1.synwc.data.repository
 
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.ValueEventListener
-import edu.bluejack25_1.synwc.data.DatabaseReference
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
+import com.google.firebase.Firebase
 import edu.bluejack25_1.synwc.data.model.User
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.lang.Exception
 
 class UserRepository {
+    private val db: FirebaseFirestore = Firebase.firestore
+    private val auth = Firebase.auth
+
+    companion object {
+        private const val USERS_COLLECTION = "users"
+        private const val NOTES_COLLECTION = "notes"
+        private const val REFLECTIONS_COLLECTION = "reflections"
+        private const val QUOTES_COLLECTION = "quotes"
+    }
 
     suspend fun createUser(user: User): Result<Unit> {
         return try {
-            DatabaseReference.usersRef()
-                .child(user.id)
-                .setValue(user.toMap())
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun updateUser(user: User): Result<Unit> {
-        return try {
-            DatabaseReference.usersRef()
-                .child(user.id)
-                .setValue(user.toMap())
+            db.collection(USERS_COLLECTION)
+                .document(user.id)
+                .set(user.toMap())
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -38,14 +33,18 @@ class UserRepository {
 
     suspend fun getUser(userId: String): Result<User> {
         return try {
-            val snapshot = DatabaseReference.usersRef()
-                .child(userId)
+            val document = db.collection(USERS_COLLECTION)
+                .document(userId)
                 .get()
                 .await()
 
-            val user = snapshot.getValue(User::class.java)
-            if (user != null) {
-                Result.success(user)
+            if (document.exists()) {
+                val user = document.toObject(User::class.java)
+                if (user != null) {
+                    Result.success(user)
+                } else {
+                    Result.failure(Exception("Failed to parse user data"))
+                }
             } else {
                 Result.failure(Exception("User not found"))
             }
@@ -54,33 +53,15 @@ class UserRepository {
         }
     }
 
-    fun getCurrentUserFlow(): Flow<User?> = callbackFlow {
-        try {
-            val currentUserId = DatabaseReference.getCurrentUserId()
-
-            val listener = object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val user = snapshot.getValue(User::class.java)
-                    trySend(user)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    close(error.toException())
-                }
-            }
-
-            DatabaseReference.usersRef()
-                .child(currentUserId)
-                .addValueEventListener(listener)
-
-            awaitClose {
-                DatabaseReference.usersRef()
-                    .child(currentUserId)
-                    .removeEventListener(listener)
-            }
+    suspend fun updateUser(user: User): Result<Unit> {
+        return try {
+            db.collection(USERS_COLLECTION)
+                .document(user.id)
+                .update(user.toMap() as Map<String, Any>)
+                .await()
+            Result.success(Unit)
         } catch (e: Exception) {
-            trySend(null)
-            awaitClose { }
+            Result.failure(e)
         }
     }
 
@@ -90,13 +71,21 @@ class UserRepository {
                 "streakCount" to newStreak,
                 "lastActiveDate" to User.getCurrentDate()
             )
-            DatabaseReference.usersRef()
-                .child(userId)
-                .updateChildren(updates)
+            db.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(updates)
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    fun getCurrentUserId(): String {
+        return auth.currentUser?.uid ?: throw Exception("User not authenticated")
+    }
+
+    fun isUserLoggedIn(): Boolean {
+        return auth.currentUser != null
     }
 }

@@ -7,13 +7,22 @@ import androidx.navigation.compose.composable
 import edu.bluejack25_1.synwc.ui.screen.onboarding.OnboardingScreen
 import edu.bluejack25_1.synwc.ui.screen.auth.LoginScreen
 import edu.bluejack25_1.synwc.ui.screen.auth.RegisterScreen
+import edu.bluejack25_1.synwc.ui.screen.home.HomeScreen
+import edu.bluejack25_1.synwc.ui.screen.splash.SplashScreen
+import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 
 @Composable
-fun AppNavGraph(navController: NavHostController) {
+fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel) {
     NavHost(
         navController = navController,
-        startDestination = "onboarding"
+        startDestination = "splash"
     ) {
+        composable("splash") {
+            SplashScreen(
+                navController = navController,
+                authViewModel = authViewModel
+            )
+        }
         composable("onboarding") {
             OnboardingScreen(
                 navController = navController,
@@ -26,6 +35,8 @@ fun AppNavGraph(navController: NavHostController) {
         composable("register") {
             RegisterScreen(navController = navController)
         }
-        composable("home") { /* TODO: your home screen */ }
+        composable("home") {
+            HomeScreen(navController = navController)
+        }
     }
 }

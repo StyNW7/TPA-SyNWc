@@ -21,14 +21,21 @@ class UserViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
 
-    init {
-        observeCurrentUser()
-    }
-
-    private fun observeCurrentUser() {
+    fun loadCurrentUser() {
         viewModelScope.launch {
-            userRepository.getCurrentUserFlow().collect { user ->
-                _currentUser.value = user
+            _loading.value = true
+            try {
+                val userId = userRepository.getCurrentUserId()
+                val result = userRepository.getUser(userId)
+                result.onSuccess { user ->
+                    _currentUser.value = user
+                }.onFailure {
+                    _errorMessage.value = "Failed to load user: ${it.message}"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "User not authenticated"
+            } finally {
+                _loading.value = false
             }
         }
     }
@@ -36,24 +43,19 @@ class UserViewModel : ViewModel() {
     fun updateStreak(newStreak: Int) {
         viewModelScope.launch {
             _loading.value = true
-            val result = userRepository.updateStreak(
-                _currentUser.value?.id ?: return@launch,
-                newStreak
-            )
-            _loading.value = false
-            result.onFailure {
-                _errorMessage.value = "Failed to update streak: ${it.message}"
-            }
-        }
-    }
-
-    fun updateUserProfile(user: User) {
-        viewModelScope.launch {
-            _loading.value = true
-            val result = userRepository.updateUser(user)
-            _loading.value = false
-            result.onFailure {
-                _errorMessage.value = "Failed to update profile: ${it.message}"
+            try {
+                val userId = userRepository.getCurrentUserId()
+                val result = userRepository.updateStreak(userId, newStreak)
+                result.onSuccess {
+                    // Reload user data after update
+                    loadCurrentUser()
+                }.onFailure {
+                    _errorMessage.value = "Failed to update streak: ${it.message}"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "User not authenticated"
+            } finally {
+                _loading.value = false
             }
         }
     }

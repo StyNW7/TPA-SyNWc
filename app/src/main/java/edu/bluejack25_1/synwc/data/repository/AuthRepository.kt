@@ -25,14 +25,14 @@ class AuthRepository {
         return try {
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
 
-            // Update user profile with username
+            // Update user profile with username in Firebase Auth
             authResult.user?.let { user ->
                 val profileUpdates = UserProfileChangeRequest.Builder()
                     .setDisplayName(username)
                     .build()
                 user.updateProfile(profileUpdates).await()
 
-                // Create user in Realtime Database
+                // Create user in Firestore
                 val newUser = User(
                     id = user.uid,
                     name = username,
@@ -41,7 +41,13 @@ class AuthRepository {
                     streakCount = 0,
                     lastActiveDate = User.getCurrentDate()
                 )
-                userRepository.createUser(newUser)
+
+                val createUserResult = userRepository.createUser(newUser)
+                if (createUserResult.isFailure) {
+                    // If Firestore creation fails, delete the auth user to maintain consistency
+                    user.delete().await()
+                    return Result.failure(createUserResult.exceptionOrNull()!!)
+                }
             }
             Result.success(Unit)
         } catch (e: Exception) {
