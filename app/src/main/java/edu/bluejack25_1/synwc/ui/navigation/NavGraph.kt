@@ -8,11 +8,16 @@ import edu.bluejack25_1.synwc.ui.screen.onboarding.OnboardingScreen
 import edu.bluejack25_1.synwc.ui.screen.auth.LoginScreen
 import edu.bluejack25_1.synwc.ui.screen.auth.RegisterScreen
 import edu.bluejack25_1.synwc.ui.screen.home.HomeScreen
+import edu.bluejack25_1.synwc.ui.screen.settings.SettingsScreen
 import edu.bluejack25_1.synwc.ui.screen.splash.SplashScreen
+import edu.bluejack25_1.synwc.ui.screen.todo.TodoScreen
 import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 
 @Composable
-fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel) {
+fun AppNavGraph(
+    navController: NavHostController,
+    authViewModel: AuthViewModel
+) {
     NavHost(
         navController = navController,
         startDestination = "splash"
@@ -26,17 +31,32 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel) 
         composable("onboarding") {
             OnboardingScreen(
                 navController = navController,
-                onGetStartedClick = { navController.navigate("login") }
+                onGetStartedClick = {
+                    navController.navigate("login")
+                }
             )
         }
         composable("login") {
-            LoginScreen(navController = navController)
+            LoginScreen(
+                navController = navController
+            )
         }
         composable("register") {
-            RegisterScreen(navController = navController)
+            RegisterScreen(
+                navController = navController
+            )
         }
         composable("home") {
-            HomeScreen(navController = navController)
+            HomeScreen(
+                navController = navController,
+                authViewModel = authViewModel
+            )
+        }
+        composable("todo") {
+            TodoScreen(navController = navController)
+        }
+        composable("settings") {
+            SettingsScreen(navController = navController)
         }
     }
 }
