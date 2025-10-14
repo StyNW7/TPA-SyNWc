@@ -6,9 +6,10 @@ data class Note(
     val id: String = "",
     val userId: String = "", // Reference to user who owns this note
     val title: String = "",
-    val content: String = "",
+    val description: String = "",
     val timestamp: Long = System.currentTimeMillis(),
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val priority: Priority = Priority.MEDIUM
 ) {
     @Exclude
     fun toMap(): Map<String, Any?> {
@@ -16,9 +17,12 @@ data class Note(
             "id" to id,
             "userId" to userId,
             "title" to title,
-            "content" to content,
+            "description" to description,
             "timestamp" to timestamp,
             "isCompleted" to isCompleted
         )
+    }
+    enum class Priority {
+        LOW, MEDIUM, HIGH
     }
 }

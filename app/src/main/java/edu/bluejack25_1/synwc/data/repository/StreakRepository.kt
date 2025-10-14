@@ -106,4 +106,8 @@ class StreakRepository {
     private fun isSameDay(lastDate: String, currentDate: String): Boolean {
         return lastDate == currentDate
     }
+
+    fun updateTodoStreak() {
+        TODO("Not yet implemented")
+    }
 }

@@ -84,7 +84,7 @@ fun BeautifulBottomNavigationBar(navController: NavController) {
         NavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(85.dp)
+                .height(95.dp)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -229,7 +229,7 @@ fun FloatingBottomNavigationBar(navController: NavController) {
         Surface(
             modifier = Modifier
                 .wrapContentWidth()
-                .height(70.dp)
+                .height(80.dp)
                 .shadow(
                     elevation = 12.dp,
                     shape = RoundedCornerShape(35.dp),
@@ -288,7 +288,7 @@ fun FloatingNavItem(
         onClick = onClick,
         modifier = Modifier
             .scale(scale)
-            .height(54.dp)
+            .height(94.dp)
             .widthIn(min = 70.dp),
         shape = RoundedCornerShape(27.dp),
         color = if (selected) {
