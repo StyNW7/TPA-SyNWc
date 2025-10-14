@@ -1,18 +1,19 @@
 package edu.bluejack25_1.synwc.data.model
 
-import com.google.firebase.database.Exclude
-
 data class Quote(
     val id: String = "",
     val text: String = "",
-    val author: String = ""
+    val author: String = "",
+    val isFavorite: Boolean = false,
+    val category: String = "daily"
 ) {
-    @Exclude
     fun toMap(): Map<String, Any?> {
         return mapOf(
             "id" to id,
             "text" to text,
-            "author" to author
+            "author" to author,
+            "isFavorite" to isFavorite,
+            "category" to category
         )
     }
 }

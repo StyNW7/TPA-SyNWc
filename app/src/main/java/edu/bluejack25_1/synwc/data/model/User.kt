@@ -10,8 +10,12 @@ data class User(
     val email: String = "",
     val profileImageUrl: String? = null,
     val joinDate: Long = System.currentTimeMillis(),
-    val streakCount: Int = 0,
-    val lastActiveDate: String = getCurrentDate()
+    val loginStreak: Int = 0,
+    val todoStreak: Int = 0,
+    val reflectionStreak: Int = 0,
+    val lastLoginDate: String = getCurrentDate(),
+    val lastTodoDate: String = getCurrentDate(),
+    val lastReflectionDate: String = getCurrentDate()
 ) {
     companion object {
         fun getCurrentDate(): String {
@@ -20,15 +24,19 @@ data class User(
         }
     }
 
-    fun toMap(): Map<String, Any> {
+    fun toMap(): Map<String, Any?> {
         return mapOf(
             "id" to id,
             "name" to name,
             "email" to email,
-            "profileImageUrl" to (profileImageUrl ?: ""),
+            "profileImageUrl" to profileImageUrl,
             "joinDate" to joinDate,
-            "streakCount" to streakCount,
-            "lastActiveDate" to lastActiveDate
+            "loginStreak" to loginStreak,
+            "todoStreak" to todoStreak,
+            "reflectionStreak" to reflectionStreak,
+            "lastLoginDate" to lastLoginDate,
+            "lastTodoDate" to lastTodoDate,
+            "lastReflectionDate" to lastReflectionDate
         )
     }
 }

@@ -59,6 +59,10 @@ dependencies {
     implementation(libs.google.accompanist.pager)
     implementation(libs.google.accompanist.pager.indicators)
 
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("com.cloudinary:cloudinary-android:2.4.0")
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.database)
     implementation(libs.firebase.auth)

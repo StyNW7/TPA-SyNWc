@@ -81,6 +81,18 @@ class UserRepository {
         }
     }
 
+    suspend fun updateUserStreaks(userId: String, updates: Map<String, Any>): Result<Unit> {
+        return try {
+            db.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(updates)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun getCurrentUserId(): String {
         return auth.currentUser?.uid ?: throw Exception("User not authenticated")
     }
