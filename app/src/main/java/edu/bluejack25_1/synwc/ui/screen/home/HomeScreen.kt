@@ -95,13 +95,13 @@ fun HomeScreen(
             BeautifulBottomNavigationBar(navController = navController)
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+    ) { innerPadding ->
         // Show loading indicator if data is loading
         if (isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -110,8 +110,8 @@ fun HomeScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(horizontal = 16.dp),
+                contentPadding = innerPadding,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Welcome Section

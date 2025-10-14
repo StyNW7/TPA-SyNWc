@@ -4,7 +4,7 @@ import com.google.firebase.database.Exclude
 
 data class Note(
     val id: String = "",
-    val userId: String = "", // Reference to user who owns this note
+    val userId: String = "",
     val title: String = "",
     val description: String = "",
     val timestamp: Long = System.currentTimeMillis(),
@@ -19,9 +19,11 @@ data class Note(
             "title" to title,
             "description" to description,
             "timestamp" to timestamp,
-            "isCompleted" to isCompleted
+            "isCompleted" to isCompleted,
+            "priority" to priority.name // Add priority to map
         )
     }
+
     enum class Priority {
         LOW, MEDIUM, HIGH
     }

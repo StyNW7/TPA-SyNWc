@@ -10,7 +10,7 @@ import edu.bluejack25_1.synwc.ui.screen.auth.RegisterScreen
 import edu.bluejack25_1.synwc.ui.screen.home.HomeScreen
 import edu.bluejack25_1.synwc.ui.screen.settings.SettingsScreen
 import edu.bluejack25_1.synwc.ui.screen.splash.SplashScreen
-import edu.bluejack25_1.synwc.ui.screen.todo.TodoScreen
+import edu.bluejack25_1.synwc.ui.screen.todo.ToDoScreen
 import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 
 @Composable
@@ -53,7 +53,7 @@ fun AppNavGraph(
             )
         }
         composable("todo") {
-            TodoScreen(navController = navController)
+            ToDoScreen(navController = navController)
         }
         composable("settings") {
             SettingsScreen(navController = navController)

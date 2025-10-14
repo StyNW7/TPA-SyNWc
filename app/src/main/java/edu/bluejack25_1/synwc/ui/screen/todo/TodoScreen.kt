@@ -1,4 +1,3 @@
-// ui/screen/todo/ToDoScreen.kt
 package edu.bluejack25_1.synwc.ui.screen.todo
 
 import androidx.compose.foundation.background
@@ -24,11 +23,13 @@ import androidx.navigation.NavController
 import edu.bluejack25_1.synwc.data.model.Note
 import edu.bluejack25_1.synwc.ui.component.BeautifulBottomNavigationBar
 import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
-import edu.bluejack25_1.synwc.ui.viewmodel.NoteFilter
 import edu.bluejack25_1.synwc.ui.viewmodel.NoteViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
+import androidx.compose.foundation.layout.FlowRow
 
-@OptIn(ExperimentalMaterial3Api::class)
+import edu.bluejack25_1.synwc.ui.viewmodel.NoteFilter
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ToDoScreen(
     navController: NavController,
@@ -39,14 +40,14 @@ fun ToDoScreen(
     val currentUser by userViewModel.currentUser.collectAsState()
     val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
 
-    // Collect states from NoteViewModel
-    val notes by noteViewModel.filteredNotes
-    val isLoading by noteViewModel.isLoading
-    val errorMessage by noteViewModel.errorMessage
-    val selectedFilter by noteViewModel.selectedFilter
-    val showAddEditDialog by noteViewModel.showAddEditDialog
-    val editingNote by noteViewModel.editingNote
-    val searchQuery by noteViewModel.searchQuery
+    // Collect states from NoteViewModel - FIXED: Use delegation properly
+    val notes = noteViewModel.filteredNotes
+    val isLoading = noteViewModel.isLoading
+    val errorMessage = noteViewModel.errorMessage
+    val selectedFilter = noteViewModel.selectedFilter
+    val showAddEditDialog = noteViewModel.showAddEditDialog
+    val editingNote = noteViewModel.editingNote
+    val searchQuery = noteViewModel.searchQuery
 
     // Load notes when screen appears or user changes
     LaunchedEffect(currentUser) {
@@ -67,7 +68,7 @@ fun ToDoScreen(
 
     // Handle errors
     LaunchedEffect(errorMessage) {
-        errorMessage?.let {
+        errorMessage?.let { error ->
             // You can show a snackbar here
         }
     }
@@ -141,10 +142,10 @@ fun ToDoScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Filter Chips
-                    Row(
+                    // Filter Chips - FIXED: Use FlowRow instead of Row for better wrapping
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
                             selected = selectedFilter == NoteFilter.ALL,
@@ -327,6 +328,8 @@ fun NoteItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var showDropdown by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -391,30 +394,38 @@ fun NoteItem(
                 }
 
                 // Actions
-                DropdownMenu(
-                    expanded = remember { mutableStateOf(false) }.value,
-                    onDismissRequest = { /* Handle dismiss */ }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Edit") },
-                        onClick = {
-                            onEdit()
-                            // Close dropdown
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            onDelete()
-                            // Close dropdown
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
-                        }
-                    )
+                Box {
+                    IconButton(
+                        onClick = { showDropdown = true }
+                    ) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+
+                    DropdownMenu(
+                        expanded = showDropdown,
+                        onDismissRequest = { showDropdown = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                onEdit()
+                                showDropdown = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                onDelete()
+                                showDropdown = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -444,11 +455,13 @@ fun PriorityIndicator(priority: Note.Priority) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddEditNoteForm(noteViewModel: NoteViewModel) {
-    val noteTitle by noteViewModel.noteTitle
-    val noteDescription by noteViewModel.noteDescription
-    val notePriority by noteViewModel.notePriority
+    // FIXED: Collect state values properly
+    val noteTitle = noteViewModel.noteTitle
+    val noteDescription = noteViewModel.noteDescription
+    val notePriority = noteViewModel.notePriority
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -483,9 +496,9 @@ fun AddEditNoteForm(noteViewModel: NoteViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Note.Priority.entries.forEach { priority ->
                     FilterChip(
