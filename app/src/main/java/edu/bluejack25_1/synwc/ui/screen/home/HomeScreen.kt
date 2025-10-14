@@ -3,6 +3,7 @@ package edu.bluejack25_1.synwc.ui.screen.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,8 +19,6 @@ import edu.bluejack25_1.synwc.ui.component.BeautifulBottomNavigationBar
 import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,11 +31,33 @@ fun HomeScreen(
     val currentUser by userViewModel.currentUser.collectAsState()
     val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
 
+    // Get state directly from HomeViewModel (no need for remember since these are already state holders)
+    val dailyQuestion = homeViewModel.dailyQuestion
+    val reflectionAnswer = homeViewModel.reflectionAnswer
+    val reflectionHistory = homeViewModel.reflectionHistory
+    val showHistory = homeViewModel.showReflectionHistory
+    val currentQuote = homeViewModel.currentQuote
+    val searchQuery = homeViewModel.searchQuery
+    val searchResults = homeViewModel.searchResults
+    val showFavorites = homeViewModel.showFavoriteQuotes
+    val favoriteQuotes = homeViewModel.favoriteQuotes
+    val errorMessage = homeViewModel.errorMessage
+    val isLoading = homeViewModel.isLoading
+
     // Load user data when screen appears
     LaunchedEffect(Unit) {
         authViewModel.checkAuthState()
         if (userLoggedIn) {
             userViewModel.loadCurrentUser()
+        }
+    }
+
+    // Handle errors with explicit type
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { error ->
+            // You can show a snackbar here
+            // For now, we'll just clear the error after a delay
+            // homeViewModel.clearError()
         }
     }
 
@@ -48,13 +69,6 @@ fun HomeScreen(
             }
         }
         return
-    }
-
-    // Handle errors
-    homeViewModel.errorMessage?.let { error ->
-        LaunchedEffect(error) {
-            // You can show a snackbar here
-        }
     }
 
     Scaffold(
@@ -82,36 +96,63 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Welcome Section
-            item {
-                WelcomeSection(currentUser = currentUser)
+        // Show loading indicator if data is loading
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Welcome Section
+                item {
+                    WelcomeSection(currentUser = currentUser)
+                }
 
-            // Streak Section
-            item {
-                StreakSection(currentUser = currentUser)
-            }
+                // Streak Section
+                item {
+                    StreakSection(currentUser = currentUser)
+                }
 
-            // Quote Section
-            item {
-                QuoteSection(homeViewModel = homeViewModel)
-            }
+                // Quote Section
+                item {
+                    QuoteSection(
+                        homeViewModel = homeViewModel,
+                        currentQuote = currentQuote,
+                        searchQuery = searchQuery,
+                        searchResults = searchResults,
+                        showFavorites = showFavorites,
+                        favoriteQuotes = favoriteQuotes,
+                        isLoading = isLoading
+                    )
+                }
 
-            // Reflection Section
-            item {
-                ReflectionSection(homeViewModel = homeViewModel)
-            }
+                // Reflection Section
+                item {
+                    ReflectionSection(
+                        homeViewModel = homeViewModel,
+                        dailyQuestion = dailyQuestion,
+                        reflectionAnswer = reflectionAnswer,
+                        reflectionHistory = reflectionHistory,
+                        showHistory = showHistory,
+                        isLoading = isLoading
+                    )
+                }
 
-            // Add bottom spacer
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+                // Add bottom spacer
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
@@ -231,13 +272,15 @@ fun StreakItem(title: String, count: Int, icon: androidx.compose.ui.graphics.vec
 }
 
 @Composable
-fun QuoteSection(homeViewModel: HomeViewModel) {
-    val currentQuote by homeViewModel.currentQuote.collectAsState()
-    val searchQuery by homeViewModel.searchQuery.collectAsState()
-    val searchResults by homeViewModel.searchResults.collectAsState()
-    val showFavorites by homeViewModel.showFavoriteQuotes.collectAsState()
-    val favoriteQuotes by homeViewModel.favoriteQuotes.collectAsState()
-
+fun QuoteSection(
+    homeViewModel: HomeViewModel,
+    currentQuote: edu.bluejack25_1.synwc.data.model.Quote?,
+    searchQuery: String,
+    searchResults: List<edu.bluejack25_1.synwc.data.model.Quote>,
+    showFavorites: Boolean,
+    favoriteQuotes: List<edu.bluejack25_1.synwc.data.model.Quote>,
+    isLoading: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -263,17 +306,26 @@ fun QuoteSection(homeViewModel: HomeViewModel) {
                 Row {
                     IconButton(
                         onClick = { homeViewModel.loadDailyQuote() },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(36.dp),
+                        enabled = !isLoading
                     ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh quote",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Refresh quote",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     IconButton(
                         onClick = { homeViewModel.toggleFavoriteQuotes() },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(36.dp),
+                        enabled = !isLoading
                     ) {
                         Icon(
                             Icons.Default.Favorite,
@@ -296,11 +348,22 @@ fun QuoteSection(homeViewModel: HomeViewModel) {
                     label = { Text("Search quotes...") },
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
-                        IconButton(onClick = { homeViewModel.searchQuotes() }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        IconButton(
+                            onClick = { homeViewModel.searchQuotes() },
+                            enabled = !isLoading && searchQuery.isNotBlank()
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
                         }
                     },
-                    singleLine = true
+                    singleLine = true,
+                    enabled = !isLoading
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -309,7 +372,7 @@ fun QuoteSection(homeViewModel: HomeViewModel) {
                 if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
                     SearchResultsSection(searchResults = searchResults, homeViewModel = homeViewModel)
                 } else {
-                    CurrentQuoteSection(currentQuote = currentQuote, homeViewModel = homeViewModel)
+                    CurrentQuoteSection(currentQuote = currentQuote, homeViewModel = homeViewModel, isLoading = isLoading)
                 }
             }
         }
@@ -319,51 +382,11 @@ fun QuoteSection(homeViewModel: HomeViewModel) {
 @Composable
 fun CurrentQuoteSection(
     currentQuote: edu.bluejack25_1.synwc.data.model.Quote?,
-    homeViewModel: HomeViewModel
+    homeViewModel: HomeViewModel,
+    isLoading: Boolean
 ) {
     Column {
-        currentQuote?.let { quote ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        "\"${quote.text}\"",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        "- ${quote.author}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.align(Alignment.End)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { homeViewModel.saveFavoriteQuote() },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Save to Favorites")
-            }
-        } ?: run {
+        if (isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -371,6 +394,63 @@ fun CurrentQuoteSection(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
+            }
+        } else {
+            currentQuote?.let { quote ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            "\"${quote.text}\"",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            "- ${quote.author}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.align(Alignment.End)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { homeViewModel.saveFavoriteQuote() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    enabled = !isLoading
+                ) {
+                    Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Save to Favorites")
+                }
+            } ?: run {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No quote available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -479,12 +559,14 @@ fun FavoriteQuotesSection(favoriteQuotes: List<edu.bluejack25_1.synwc.data.model
 }
 
 @Composable
-fun ReflectionSection(homeViewModel: HomeViewModel) {
-    val dailyQuestion by homeViewModel.dailyQuestion.collectAsState()
-    val reflectionAnswer by homeViewModel.reflectionAnswer.collectAsState()
-    val reflectionHistory by homeViewModel.reflectionHistory.collectAsState()
-    val showHistory by homeViewModel.showReflectionHistory.collectAsState()
-
+fun ReflectionSection(
+    homeViewModel: HomeViewModel,
+    dailyQuestion: String,
+    reflectionAnswer: String,
+    reflectionHistory: List<edu.bluejack25_1.synwc.data.model.Reflection>,
+    showHistory: Boolean,
+    isLoading: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -509,7 +591,8 @@ fun ReflectionSection(homeViewModel: HomeViewModel) {
 
                 IconButton(
                     onClick = { homeViewModel.toggleReflectionHistory() },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(36.dp),
+                    enabled = !isLoading
                 ) {
                     Icon(
                         Icons.Default.History,
@@ -527,7 +610,8 @@ fun ReflectionSection(homeViewModel: HomeViewModel) {
                 CurrentReflectionSection(
                     dailyQuestion = dailyQuestion,
                     reflectionAnswer = reflectionAnswer,
-                    homeViewModel = homeViewModel
+                    homeViewModel = homeViewModel,
+                    isLoading = isLoading
                 )
             }
         }
@@ -538,7 +622,8 @@ fun ReflectionSection(homeViewModel: HomeViewModel) {
 fun CurrentReflectionSection(
     dailyQuestion: String,
     reflectionAnswer: String,
-    homeViewModel: HomeViewModel
+    homeViewModel: HomeViewModel,
+    isLoading: Boolean
 ) {
     Column {
         Card(
@@ -579,7 +664,8 @@ fun CurrentReflectionSection(
                 .height(120.dp),
             shape = RoundedCornerShape(12.dp),
             singleLine = false,
-            maxLines = 4
+            maxLines = 4,
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -587,7 +673,7 @@ fun CurrentReflectionSection(
         Button(
             onClick = { homeViewModel.saveReflection() },
             modifier = Modifier.fillMaxWidth(),
-            enabled = reflectionAnswer.isNotBlank(),
+            enabled = reflectionAnswer.isNotBlank() && !isLoading,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             )
@@ -604,7 +690,8 @@ fun CurrentReflectionSection(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary
-            )
+            ),
+            enabled = !isLoading
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))

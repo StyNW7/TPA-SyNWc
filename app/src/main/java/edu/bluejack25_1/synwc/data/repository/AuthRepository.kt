@@ -32,14 +32,18 @@ class AuthRepository {
                     .build()
                 user.updateProfile(profileUpdates).await()
 
-                // Create user in Firestore
+                // Create user in Firestore with new streak fields
                 val newUser = User(
                     id = user.uid,
                     name = username,
                     email = email,
                     joinDate = System.currentTimeMillis(),
-                    streakCount = 0,
-                    lastActiveDate = User.getCurrentDate()
+                    loginStreak = 1, // Start with 1 for the first day
+                    todoStreak = 0,
+                    reflectionStreak = 0,
+                    lastLoginDate = User.getCurrentDate(),
+                    lastTodoDate = User.getCurrentDate(),
+                    lastReflectionDate = User.getCurrentDate()
                 )
 
                 val createUserResult = userRepository.createUser(newUser)

@@ -73,12 +73,14 @@ class HomeViewModel : ViewModel() {
     // Quote Functions
     fun loadDailyQuote() {
         viewModelScope.launch {
+            isLoading = true
             val result = quoteRepository.getDailyQuote()
             result.onSuccess { quote ->
                 currentQuote = quote
             }.onFailure {
                 errorMessage = "Failed to load quote: ${it.message}"
             }
+            isLoading = false
         }
     }
 
@@ -107,31 +109,45 @@ class HomeViewModel : ViewModel() {
     }
 
     fun searchQuotes() {
-        if (searchQuery.isBlank()) return
+        if (searchQuery.isBlank()) {
+            searchResults = emptyList()
+            return
+        }
 
         viewModelScope.launch {
+            isLoading = true
             val result = quoteRepository.searchQuotes(searchQuery)
             result.onSuccess { quotes ->
                 searchResults = quotes
             }.onFailure {
                 errorMessage = "Failed to search quotes: ${it.message}"
+                searchResults = emptyList()
             }
+            isLoading = false
         }
     }
 
     fun updateSearchQuery(query: String) {
         searchQuery = query
+        // Clear search results when query is cleared
+        if (query.isBlank()) {
+            searchResults = emptyList()
+        }
     }
 
     // Reflection Functions
     fun loadDailyReflectionQuestion() {
         viewModelScope.launch {
+            isLoading = true
             val result = reflectionRepository.getDailyReflectionQuestion()
             result.onSuccess { question ->
                 dailyQuestion = question
             }.onFailure {
                 errorMessage = "Failed to load reflection question: ${it.message}"
+                // Set a default question if loading fails
+                dailyQuestion = "What are you grateful for today?"
             }
+            isLoading = false
         }
     }
 
@@ -146,15 +162,19 @@ class HomeViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
+            isLoading = true
             val result = reflectionRepository.saveReflection(dailyQuestion, reflectionAnswer)
             result.onSuccess {
                 updateReflectionStreak()
                 reflectionAnswer = ""
                 loadReflectionHistory()
                 errorMessage = null
+                // Load a new question after saving
+                loadDailyReflectionQuestion()
             }.onFailure {
                 errorMessage = "Failed to save reflection: ${it.message}"
             }
+            isLoading = false
         }
     }
 
@@ -185,10 +205,16 @@ class HomeViewModel : ViewModel() {
     // UI State Functions
     fun toggleReflectionHistory() {
         showReflectionHistory = !showReflectionHistory
+        if (showReflectionHistory && reflectionHistory.isEmpty()) {
+            loadReflectionHistory()
+        }
     }
 
     fun toggleFavoriteQuotes() {
         showFavoriteQuotes = !showFavoriteQuotes
+        if (showFavoriteQuotes && favoriteQuotes.isEmpty()) {
+            loadFavoriteQuotes()
+        }
     }
 
     fun clearError() {
