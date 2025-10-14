@@ -1,4 +1,3 @@
-// ui/viewmodel/NoteViewModel.kt
 package edu.bluejack25_1.synwc.ui.viewmodel
 
 import androidx.compose.runtime.getValue
@@ -15,6 +14,7 @@ class NoteViewModel : ViewModel() {
     private val noteRepository = NoteRepository()
     private val streakRepository = StreakRepository()
 
+    // States
     var notes by mutableStateOf<List<Note>>(emptyList())
         private set
 
@@ -50,21 +50,46 @@ class NoteViewModel : ViewModel() {
         private set
 
     fun loadNotes(userId: String) {
+        if (userId.isBlank()) {
+            errorMessage = "User ID is required to load notes"
+            return
+        }
+
         viewModelScope.launch {
             isLoading = true
-            val result = noteRepository.getNotes(userId)
-            result.onSuccess { loadedNotes ->
-                notes = loadedNotes
+            println("DEBUG: Loading notes for user: $userId")
+            try {
+                val result = noteRepository.getNotes(userId)
+                result.onSuccess { loadedNotes ->
+                    println("DEBUG: Successfully loaded ${loadedNotes.size} notes")
+                    notes = loadedNotes
+                    applyFilters()
+                    errorMessage = null
+                }.onFailure { exception ->
+                    val error = "Failed to load notes: ${exception.message}"
+                    println("DEBUG: $error")
+                    errorMessage = error
+                    // Set empty list on error
+                    notes = emptyList()
+                    applyFilters()
+                }
+            } catch (e: Exception) {
+                val error = "Exception loading notes: ${e.message}"
+                println("DEBUG: $error")
+                errorMessage = error
+                notes = emptyList()
                 applyFilters()
-                errorMessage = null
-            }.onFailure {
-                errorMessage = "Failed to load notes: ${it.message}"
             }
             isLoading = false
         }
     }
 
     fun addNote(userId: String) {
+        if (userId.isBlank()) {
+            errorMessage = "User ID is required to add note"
+            return
+        }
+
         if (noteTitle.isBlank()) {
             errorMessage = "Please enter a title"
             return
@@ -72,28 +97,47 @@ class NoteViewModel : ViewModel() {
 
         viewModelScope.launch {
             isLoading = true
-            val newNote = Note(
-                title = noteTitle,
-                description = noteDescription,
-                priority = notePriority,
-                isCompleted = false
-            )
+            println("DEBUG: Adding note for user: $userId")
+            println("DEBUG: Note title: '$noteTitle', description: '$noteDescription'")
 
-            val result = noteRepository.addNote(newNote, userId)
-            result.onSuccess {
-                updateTodoStreak()
-                loadNotes(userId)
-                resetForm()
-                showAddEditDialog = false
-                errorMessage = null
-            }.onFailure {
-                errorMessage = "Failed to add note: ${it.message}"
+            try {
+                val newNote = Note(
+                    title = noteTitle.trim(),
+                    description = noteDescription.trim(),
+                    priority = notePriority,
+                    isCompleted = false,
+                    timestamp = System.currentTimeMillis()
+                )
+
+                val result = noteRepository.addNote(newNote, userId)
+                result.onSuccess { noteId ->
+                    println("DEBUG: Successfully added note with ID: $noteId")
+                    updateTodoStreak()
+                    // Reload the list to show the new note
+                    loadNotes(userId)
+                    resetForm()
+                    showAddEditDialog = false
+                    errorMessage = null
+                }.onFailure { exception ->
+                    val error = "Failed to add note: ${exception.message}"
+                    println("DEBUG: $error")
+                    errorMessage = error
+                }
+            } catch (e: Exception) {
+                val error = "Exception adding note: ${e.message}"
+                println("DEBUG: $error")
+                errorMessage = error
             }
             isLoading = false
         }
     }
 
     fun updateNote(userId: String) {
+        if (userId.isBlank()) {
+            errorMessage = "User ID is required to update note"
+            return
+        }
+
         if (noteTitle.isBlank()) {
             errorMessage = "Please enter a title"
             return
@@ -102,51 +146,93 @@ class NoteViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading = true
             editingNote?.let { note ->
-                val updatedNote = note.copy(
-                    title = noteTitle,
-                    description = noteDescription,
-                    priority = notePriority
-                )
+                println("DEBUG: Updating note: ${note.id}")
 
-                val result = noteRepository.updateNote(updatedNote, userId)
-                result.onSuccess {
-                    loadNotes(userId)
-                    resetForm()
-                    showAddEditDialog = false
-                    editingNote = null
-                    errorMessage = null
-                }.onFailure {
-                    errorMessage = "Failed to update note: ${it.message}"
+                try {
+                    val updatedNote = note.copy(
+                        title = noteTitle.trim(),
+                        description = noteDescription.trim(),
+                        priority = notePriority,
+                        timestamp = System.currentTimeMillis() // Update timestamp on edit
+                    )
+
+                    val result = noteRepository.updateNote(updatedNote, userId)
+                    result.onSuccess {
+                        println("DEBUG: Successfully updated note")
+                        loadNotes(userId)
+                        resetForm()
+                        showAddEditDialog = false
+                        editingNote = null
+                        errorMessage = null
+                    }.onFailure { exception ->
+                        val error = "Failed to update note: ${exception.message}"
+                        println("DEBUG: $error")
+                        errorMessage = error
+                    }
+                } catch (e: Exception) {
+                    val error = "Exception updating note: ${e.message}"
+                    println("DEBUG: $error")
+                    errorMessage = error
                 }
+            } ?: run {
+                errorMessage = "No note selected for editing"
             }
             isLoading = false
         }
     }
 
     fun deleteNote(noteId: String) {
+        if (noteId.isBlank()) {
+            errorMessage = "Note ID is required for deletion"
+            return
+        }
+
         viewModelScope.launch {
             isLoading = true
-            val result = noteRepository.deleteNote(noteId)
-            result.onSuccess {
-                loadNotes("") // userId will be handled in the actual call
-                errorMessage = null
-            }.onFailure {
-                errorMessage = "Failed to delete note: ${it.message}"
+            println("DEBUG: Deleting note: $noteId")
+            try {
+                val result = noteRepository.deleteNote(noteId)
+                result.onSuccess {
+                    println("DEBUG: Successfully deleted note")
+                    errorMessage = null
+                    // Note: We don't reload here because the UI will trigger reload
+                }.onFailure { exception ->
+                    val error = "Failed to delete note: ${exception.message}"
+                    println("DEBUG: $error")
+                    errorMessage = error
+                }
+            } catch (e: Exception) {
+                val error = "Exception deleting note: ${e.message}"
+                println("DEBUG: $error")
+                errorMessage = error
             }
             isLoading = false
         }
     }
 
     fun toggleNoteStatus(noteId: String, isCompleted: Boolean) {
+        if (noteId.isBlank()) {
+            errorMessage = "Note ID is required to toggle status"
+            return
+        }
+
         viewModelScope.launch {
-            val result = noteRepository.toggleNoteStatus(noteId, isCompleted)
-            result.onSuccess {
-                loadNotes("") // userId will be handled in the actual call
-                if (isCompleted) {
-                    updateTodoStreak()
+            println("DEBUG: Toggling note $noteId to $isCompleted")
+            try {
+                val result = noteRepository.toggleNoteStatus(noteId, isCompleted)
+                result.onSuccess {
+                    println("DEBUG: Successfully toggled note status")
+                    errorMessage = null
+                    // Note: We don't reload here because the UI will trigger reload
+                }.onFailure { exception ->
+                    val error = "Failed to update note status: ${exception.message}"
+                    println("DEBUG: $error")
+                    errorMessage = error
                 }
-            }.onFailure {
-                errorMessage = "Failed to update note status: ${it.message}"
+            } catch (e: Exception) {
+                val error = "Exception toggling note status: ${e.message}"
+                println("DEBUG: $error")
+                errorMessage = error
             }
         }
     }
@@ -165,6 +251,7 @@ class NoteViewModel : ViewModel() {
             note.title.contains(searchQuery, ignoreCase = true) ||
                     note.description.contains(searchQuery, ignoreCase = true)
         }
+        println("DEBUG: Applied filters. Total notes: ${notes.size}, Filtered: ${filteredNotes.size}")
     }
 
     fun updateSearchQuery(query: String) {
@@ -212,7 +299,12 @@ class NoteViewModel : ViewModel() {
 
     private fun updateTodoStreak() {
         viewModelScope.launch {
-            streakRepository.updateTodoStreak()
+            try {
+                streakRepository.updateTodoStreak()
+                println("DEBUG: Updated todo streak")
+            } catch (e: Exception) {
+                println("DEBUG: Failed to update todo streak: ${e.message}")
+            }
         }
     }
 
