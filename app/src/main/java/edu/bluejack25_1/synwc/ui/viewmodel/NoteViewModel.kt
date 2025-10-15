@@ -49,11 +49,16 @@ class NoteViewModel : ViewModel() {
     var notePriority by mutableStateOf(Note.Priority.MEDIUM)
         private set
 
+    // Store current user ID for refreshing
+    private var currentUserId: String = ""
+
     fun loadNotes(userId: String) {
         if (userId.isBlank()) {
             errorMessage = "User ID is required to load notes"
             return
         }
+
+        currentUserId = userId // Store for refresh operations
 
         viewModelScope.launch {
             isLoading = true
@@ -69,7 +74,6 @@ class NoteViewModel : ViewModel() {
                     val error = "Failed to load notes: ${exception.message}"
                     println("DEBUG: $error")
                     errorMessage = error
-                    // Set empty list on error
                     notes = emptyList()
                     applyFilters()
                 }
@@ -86,7 +90,7 @@ class NoteViewModel : ViewModel() {
 
     fun addNote(userId: String) {
         if (userId.isBlank()) {
-            errorMessage = "User ID is required to add note"
+            errorMessage = "User ID is required to add note. Please make sure you're logged in."
             return
         }
 
@@ -106,15 +110,19 @@ class NoteViewModel : ViewModel() {
                     description = noteDescription.trim(),
                     priority = notePriority,
                     isCompleted = false,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    userId = userId
                 )
 
-                val result = noteRepository.addNote(newNote, userId)
+                val result = noteRepository.addNote(newNote)
                 result.onSuccess { noteId ->
                     println("DEBUG: Successfully added note with ID: $noteId")
-                    updateTodoStreak()
-                    // Reload the list to show the new note
-                    loadNotes(userId)
+
+                    // Update streak (with error handling to prevent crash)
+                    updateTodoStreak(userId)
+
+                    // Refresh the list to show the new note
+                    refreshNotes()
                     resetForm()
                     showAddEditDialog = false
                     errorMessage = null
@@ -134,7 +142,7 @@ class NoteViewModel : ViewModel() {
 
     fun updateNote(userId: String) {
         if (userId.isBlank()) {
-            errorMessage = "User ID is required to update note"
+            errorMessage = "User ID is required to update note. Please make sure you're logged in."
             return
         }
 
@@ -153,13 +161,15 @@ class NoteViewModel : ViewModel() {
                         title = noteTitle.trim(),
                         description = noteDescription.trim(),
                         priority = notePriority,
-                        timestamp = System.currentTimeMillis() // Update timestamp on edit
+                        timestamp = System.currentTimeMillis(),
+                        userId = userId
                     )
 
-                    val result = noteRepository.updateNote(updatedNote, userId)
+                    val result = noteRepository.updateNote(updatedNote)
                     result.onSuccess {
                         println("DEBUG: Successfully updated note")
-                        loadNotes(userId)
+                        // Refresh the list
+                        refreshNotes()
                         resetForm()
                         showAddEditDialog = false
                         editingNote = null
@@ -195,7 +205,8 @@ class NoteViewModel : ViewModel() {
                 result.onSuccess {
                     println("DEBUG: Successfully deleted note")
                     errorMessage = null
-                    // Note: We don't reload here because the UI will trigger reload
+                    // Refresh the list after deletion
+                    refreshNotes()
                 }.onFailure { exception ->
                     val error = "Failed to delete note: ${exception.message}"
                     println("DEBUG: $error")
@@ -223,7 +234,8 @@ class NoteViewModel : ViewModel() {
                 result.onSuccess {
                     println("DEBUG: Successfully toggled note status")
                     errorMessage = null
-                    // Note: We don't reload here because the UI will trigger reload
+                    // Refresh the list to show updated status
+                    refreshNotes()
                 }.onFailure { exception ->
                     val error = "Failed to update note status: ${exception.message}"
                     println("DEBUG: $error")
@@ -234,6 +246,30 @@ class NoteViewModel : ViewModel() {
                 println("DEBUG: $error")
                 errorMessage = error
             }
+        }
+    }
+
+    // New function to refresh notes
+    private fun refreshNotes() {
+        if (currentUserId.isNotBlank()) {
+            loadNotes(currentUserId)
+        }
+    }
+
+    // FIXED: Add proper error handling for streak update
+    private suspend fun updateTodoStreak(userId: String) {
+        try {
+            val result = streakRepository.updateTodoStreak(userId)
+            result.onSuccess {
+                println("DEBUG: Successfully updated todo streak")
+            }.onFailure { exception ->
+                // Don't crash the app if streak update fails, just log it
+                println("DEBUG: Failed to update todo streak: ${exception.message}")
+                // You can optionally show a non-blocking message to the user
+            }
+        } catch (e: Exception) {
+            // Catch any unexpected exceptions to prevent crash
+            println("DEBUG: Exception updating todo streak: ${e.message}")
         }
     }
 
@@ -295,17 +331,6 @@ class NoteViewModel : ViewModel() {
         noteTitle = ""
         noteDescription = ""
         notePriority = Note.Priority.MEDIUM
-    }
-
-    private fun updateTodoStreak() {
-        viewModelScope.launch {
-            try {
-                streakRepository.updateTodoStreak()
-                println("DEBUG: Updated todo streak")
-            } catch (e: Exception) {
-                println("DEBUG: Failed to update todo streak: ${e.message}")
-            }
-        }
     }
 
     fun clearError() {

@@ -26,6 +26,10 @@ import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.NoteViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import kotlinx.coroutines.launch
 
 import edu.bluejack25_1.synwc.ui.viewmodel.NoteFilter
 
@@ -38,9 +42,10 @@ fun ToDoScreen(
     noteViewModel: NoteViewModel = viewModel()
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
+    val userLoading by userViewModel.loading.collectAsState()
     val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
 
-    // Collect states from NoteViewModel - FIXED: Use delegation properly
+    // Collect states from NoteViewModel - FIXED: Don't use delegation for primitive types
     val notes = noteViewModel.filteredNotes
     val isLoading = noteViewModel.isLoading
     val errorMessage = noteViewModel.errorMessage
@@ -49,9 +54,32 @@ fun ToDoScreen(
     val editingNote = noteViewModel.editingNote
     val searchQuery = noteViewModel.searchQuery
 
-    // Load notes when screen appears or user changes
-    LaunchedEffect(currentUser) {
+    // Form fields - FIXED: Collect these properly
+    val noteTitle = noteViewModel.noteTitle
+    val noteDescription = noteViewModel.noteDescription
+    val notePriority = noteViewModel.notePriority
+
+    // Snackbar for error handling
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Get current user ID safely
+    val currentUserId = currentUser?.id ?: ""
+
+    // Load user and notes when screen appears
+    LaunchedEffect(Unit) {
+        if (userLoggedIn) {
+            if (currentUser == null && !userLoading) {
+                println("DEBUG: Loading current user...")
+                userViewModel.loadCurrentUser()
+            }
+        }
+    }
+
+    // Load notes when user is available
+    LaunchedEffect(currentUser, userLoggedIn) {
         if (userLoggedIn && currentUser != null) {
+            println("DEBUG: User loaded, loading notes for user: ${currentUser!!.id}")
             noteViewModel.loadNotes(currentUser!!.id)
         }
     }
@@ -66,14 +94,23 @@ fun ToDoScreen(
         return
     }
 
-    // Handle errors
+    // Handle errors with Snackbar
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
-            // You can show a snackbar here
+            coroutineScope.launch {
+                val result = snackbarHostState.showSnackbar(
+                    message = error,
+                    actionLabel = "Dismiss"
+                )
+                if (result == SnackbarResult.Dismissed) {
+                    noteViewModel.clearError()
+                }
+            }
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -98,11 +135,29 @@ fun ToDoScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { noteViewModel.showAddNoteDialog() },
+                onClick = {
+                    if (currentUserId.isNotBlank()) {
+                        noteViewModel.showAddNoteDialog()
+                    } else {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Please wait while we load your user information")
+                        }
+                        // Force reload user if not available
+                        userViewModel.loadCurrentUser()
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
+                if (userLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(Icons.Default.Add, contentDescription = "Add Note")
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -112,6 +167,14 @@ fun ToDoScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // User Loading Indicator
+            if (userLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             // Search Bar
             Card(
                 modifier = Modifier
@@ -122,6 +185,7 @@ fun ToDoScreen(
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
+                    // FIXED: Explicitly use String version of OutlinedTextField
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { noteViewModel.updateSearchQuery(it) },
@@ -142,7 +206,7 @@ fun ToDoScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Filter Chips - FIXED: Use FlowRow instead of Row for better wrapping
+                    // Filter Chips
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -167,90 +231,127 @@ fun ToDoScreen(
             }
 
             // Stats
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
+            if (currentUser != null) {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceAround
+                        .padding(horizontal = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    StatItem(
-                        count = notes.size.toString(),
-                        label = "Total"
-                    )
-                    StatItem(
-                        count = notes.count { !it.isCompleted }.toString(),
-                        label = "Active"
-                    )
-                    StatItem(
-                        count = notes.count { it.isCompleted }.toString(),
-                        label = "Completed"
-                    )
-                }
-            }
-
-            // Notes List
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (notes.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        Icon(
-                            Icons.Default.NoteAdd,
-                            contentDescription = "No notes",
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        StatItem(
+                            count = notes.size.toString(),
+                            label = "Total"
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "No notes found",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        StatItem(
+                            count = notes.count { !it.isCompleted }.toString(),
+                            label = "Active"
                         )
-                        Text(
-                            "Tap the + button to add your first note",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        StatItem(
+                            count = notes.count { it.isCompleted }.toString(),
+                            label = "Completed"
                         )
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(notes, key = { it.id }) { note ->
-                        NoteItem(
-                            note = note,
-                            onToggleStatus = { isCompleted ->
-                                noteViewModel.toggleNoteStatus(note.id, isCompleted)
-                            },
-                            onEdit = { noteViewModel.showEditNoteDialog(note) },
-                            onDelete = { noteViewModel.deleteNote(note.id) }
-                        )
+            }
+
+            // Notes List - RecyclerView (LazyColumn)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                when {
+                    userLoading -> {
+                        // Show loading while user is being loaded
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading your information...")
+                        }
+                    }
+                    isLoading && notes.isEmpty() -> {
+                        // Show loading while notes are being loaded
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading your notes...")
+                        }
+                    }
+                    notes.isEmpty() -> {
+                        // Empty state
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Default.NoteAdd,
+                                contentDescription = "No notes",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "No notes found",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "Tap the + button to add your first note",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    else -> {
+                        // RecyclerView for notes
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp)
+                        ) {
+                            items(
+                                items = notes,
+                                key = { it.id }
+                            ) { note ->
+                                NoteItem(
+                                    note = note,
+                                    onToggleStatus = { isCompleted ->
+                                        // This will now automatically refresh the list
+                                        noteViewModel.toggleNoteStatus(note.id, isCompleted)
+                                    },
+                                    onEdit = {
+                                        if (currentUserId.isNotBlank()) {
+                                            noteViewModel.showEditNoteDialog(note)
+                                        } else {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Please wait while we load your user information")
+                                            }
+                                        }
+                                    },
+                                    onDelete = {
+                                        // This will now automatically refresh the list
+                                        noteViewModel.deleteNote(note.id)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -265,18 +366,30 @@ fun ToDoScreen(
                 Text(if (editingNote != null) "Edit Note" else "Add New Note")
             },
             text = {
-                AddEditNoteForm(noteViewModel = noteViewModel)
+                AddEditNoteForm(
+                    noteViewModel = noteViewModel,
+                    noteTitle = noteTitle,
+                    noteDescription = noteDescription,
+                    notePriority = notePriority
+                )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (editingNote != null) {
-                            noteViewModel.updateNote(currentUser?.id ?: "")
+                        if (currentUserId.isNotBlank()) {
+                            if (editingNote != null) {
+                                noteViewModel.updateNote(currentUserId)
+                            } else {
+                                noteViewModel.addNote(currentUserId)
+                            }
                         } else {
-                            noteViewModel.addNote(currentUser?.id ?: "")
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("User information not available. Please try again.")
+                                noteViewModel.hideAddEditDialog()
+                            }
                         }
                     },
-                    enabled = !isLoading
+                    enabled = !isLoading && currentUserId.isNotBlank() && noteTitle.isNotBlank()
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -331,11 +444,14 @@ fun NoteItem(
     var showDropdown by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -362,7 +478,8 @@ fun NoteItem(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        textDecoration = if (note.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        textDecoration = if (note.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        maxLines = 2
                     )
 
                     if (note.description.isNotBlank()) {
@@ -371,7 +488,8 @@ fun NoteItem(
                             text = note.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textDecoration = if (note.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                            textDecoration = if (note.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                            maxLines = 3
                         )
                     }
 
@@ -457,25 +575,28 @@ fun PriorityIndicator(priority: Note.Priority) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddEditNoteForm(noteViewModel: NoteViewModel) {
-    // FIXED: Collect state values properly
-    val noteTitle = noteViewModel.noteTitle
-    val noteDescription = noteViewModel.noteDescription
-    val notePriority = noteViewModel.notePriority
-
+fun AddEditNoteForm(
+    noteViewModel: NoteViewModel,
+    noteTitle: String,
+    noteDescription: String,
+    notePriority: Note.Priority
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // FIXED: Explicitly use String version of OutlinedTextField
         OutlinedTextField(
             value = noteTitle,
             onValueChange = { noteViewModel.updateNoteTitle(it) },
             label = { Text("Title *") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            isError = noteTitle.isBlank()
         )
 
+        // FIXED: Explicitly use String version of OutlinedTextField
         OutlinedTextField(
             value = noteDescription,
             onValueChange = { noteViewModel.updateNoteDescription(it) },

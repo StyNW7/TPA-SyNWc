@@ -14,7 +14,6 @@ class NoteRepository {
             println("DEBUG: Fetching notes for user: $userId")
             val snapshot = notesCollection
                 .whereEqualTo("userId", userId)
-                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
                 .await()
 
@@ -22,6 +21,7 @@ class NoteRepository {
                 try {
                     Note(
                         id = doc.id,
+                        userId = doc.getString("userId") ?: "",
                         title = doc.getString("title") ?: "",
                         description = doc.getString("description") ?: "",
                         timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
@@ -37,25 +37,22 @@ class NoteRepository {
                     null
                 }
             }
-            println("DEBUG: Successfully fetched ${notes.size} notes")
-            Result.success(notes)
+
+            // Sort manually on client side
+            val sortedNotes = notes.sortedByDescending { it.timestamp }
+
+            println("DEBUG: Successfully fetched ${sortedNotes.size} notes")
+            Result.success(sortedNotes)
         } catch (e: Exception) {
             println("DEBUG: Error fetching notes: ${e.message}")
             Result.failure(e)
         }
     }
 
-    suspend fun addNote(note: Note, userId: String): Result<String> {
+    suspend fun addNote(note: Note): Result<String> {
         return try {
             val noteId = if (note.id.isBlank()) UUID.randomUUID().toString() else note.id
-            val noteData = hashMapOf(
-                "userId" to userId,
-                "title" to note.title,
-                "description" to note.description,
-                "timestamp" to note.timestamp,
-                "isCompleted" to note.isCompleted,
-                "priority" to note.priority.name
-            )
+            val noteData = note.toMap()
 
             println("DEBUG: Adding note to Firestore: $noteData")
             notesCollection.document(noteId).set(noteData).await()
@@ -67,20 +64,13 @@ class NoteRepository {
         }
     }
 
-    suspend fun updateNote(note: Note, userId: String): Result<Unit> {
+    suspend fun updateNote(note: Note): Result<Unit> {
         return try {
             if (note.id.isBlank()) {
                 throw IllegalArgumentException("Note ID cannot be blank for update")
             }
 
-            val noteData = hashMapOf(
-                "userId" to userId,
-                "title" to note.title,
-                "description" to note.description,
-                "timestamp" to note.timestamp,
-                "isCompleted" to note.isCompleted,
-                "priority" to note.priority.name
-            )
+            val noteData = note.toMap()
 
             println("DEBUG: Updating note ${note.id} in Firestore")
             notesCollection.document(note.id).set(noteData).await()

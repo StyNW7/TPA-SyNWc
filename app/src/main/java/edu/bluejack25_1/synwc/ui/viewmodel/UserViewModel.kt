@@ -21,19 +21,29 @@ class UserViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
 
+    init {
+        loadCurrentUser()
+    }
+
     fun loadCurrentUser() {
         viewModelScope.launch {
             _loading.value = true
+            _errorMessage.value = null
             try {
                 val userId = userRepository.getCurrentUserId()
                 val result = userRepository.getUser(userId)
                 result.onSuccess { user ->
                     _currentUser.value = user
+                    println("DEBUG: User loaded successfully: ${user.name}, ID: ${user.id}")
                 }.onFailure {
-                    _errorMessage.value = "Failed to load user: ${it.message}"
+                    val error = "Failed to load user: ${it.message}"
+                    _errorMessage.value = error
+                    println("DEBUG: $error")
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "User not authenticated"
+                val error = "User not authenticated: ${e.message}"
+                _errorMessage.value = error
+                println("DEBUG: $error")
             } finally {
                 _loading.value = false
             }

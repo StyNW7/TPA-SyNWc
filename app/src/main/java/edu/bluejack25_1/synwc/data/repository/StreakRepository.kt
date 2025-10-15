@@ -12,6 +12,7 @@ import java.util.*
 class StreakRepository {
     private val db: FirebaseFirestore = Firebase.firestore
     private val auth = Firebase.auth
+    private val userRepository = UserRepository()
 
     companion object {
         private const val USERS_COLLECTION = "users"
@@ -107,7 +108,50 @@ class StreakRepository {
         return lastDate == currentDate
     }
 
-    fun updateTodoStreak() {
-        TODO("Not yet implemented")
+    suspend fun updateTodoStreak(userId: String): Result<Unit> {
+        return try {
+            // Get current user
+            val userResult = userRepository.getUser(userId)
+            if (userResult.isFailure) {
+                return Result.failure(userResult.exceptionOrNull() ?: Exception("User not found"))
+            }
+
+            val user = userResult.getOrNull()!!
+            val currentDate = User.getCurrentDate()
+
+            // Check if user already updated todo today
+            if (user.lastTodoDate == currentDate) {
+                return Result.success(Unit) // Already updated today, no change needed
+            }
+
+            // Check if it's consecutive day (yesterday)
+            val calendar = Calendar.getInstance()
+            calendar.time = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(currentDate)!!
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val yesterday = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+
+            val newStreak = if (user.lastTodoDate == yesterday) {
+                // Consecutive day - increment streak
+                user.todoStreak + 1
+            } else {
+                // Not consecutive - reset to 1
+                1
+            }
+
+            // Update user streak
+            val updates = mapOf(
+                "todoStreak" to newStreak,
+                "lastTodoDate" to currentDate
+            )
+
+            val updateResult = userRepository.updateUserStreaks(userId, updates)
+            if (updateResult.isFailure) {
+                return Result.failure(updateResult.exceptionOrNull() ?: Exception("Failed to update streak"))
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
