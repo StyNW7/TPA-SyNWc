@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import edu.bluejack25_1.synwc.data.model.Quote
 import edu.bluejack25_1.synwc.ui.component.BeautifulBottomNavigationBar
 import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
@@ -381,7 +382,7 @@ fun QuoteSection(
 
 @Composable
 fun CurrentQuoteSection(
-    currentQuote: edu.bluejack25_1.synwc.data.model.Quote?,
+    currentQuote: Quote?,
     homeViewModel: HomeViewModel,
     isLoading: Boolean
 ) {

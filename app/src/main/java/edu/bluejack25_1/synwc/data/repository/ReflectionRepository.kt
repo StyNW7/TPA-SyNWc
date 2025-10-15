@@ -6,6 +6,7 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.Firebase
 import edu.bluejack25_1.synwc.data.model.Reflection
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
 import java.util.*
 
 class ReflectionRepository {
@@ -14,22 +15,28 @@ class ReflectionRepository {
 
     companion object {
         private const val REFLECTIONS_COLLECTION = "reflections"
-        private const val REFLECTION_QUESTIONS_COLLECTION = "reflection_questions"
+        private val reflectionQuestions = listOf(
+            "What are you grateful for today?",
+            "What was the highlight of your day?",
+            "What challenged you today and how did you overcome it?",
+            "What did you learn today?",
+            "How did you show kindness today?",
+            "What are you looking forward to tomorrow?",
+            "What made you smile today?",
+            "How did you take care of yourself today?",
+            "What would you like to improve about today?",
+            "What are you proud of accomplishing today?"
+        )
     }
 
-    suspend fun getDailyReflectionQuestion(): Result<String> {
+    suspend fun getDailyQuestion(): Result<String> {
         return try {
-            val snapshot = db.collection(REFLECTION_QUESTIONS_COLLECTION)
-                .get()
-                .await()
-
-            val questions = snapshot.documents.map { it.getString("question") ?: "" }
-            if (questions.isNotEmpty()) {
-                val randomQuestion = questions.random()
-                Result.success(randomQuestion)
-            } else {
-                Result.success("What are you grateful for today?")
-            }
+            // Get a random question based on the current date for consistency
+            val calendar = Calendar.getInstance()
+            val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
+            val random = Random(dayOfYear.toLong()) // Same question for the same day
+            val question = reflectionQuestions[random.nextInt(reflectionQuestions.size)]
+            Result.success(question)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -39,17 +46,17 @@ class ReflectionRepository {
         return try {
             val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
             val reflectionId = UUID.randomUUID().toString()
+            val currentDate = getCurrentDate()
 
             val reflection = Reflection(
                 id = reflectionId,
                 userId = userId,
                 question = question,
-                answer = answer
+                answer = answer,
+                date = currentDate
             )
 
             db.collection(REFLECTIONS_COLLECTION)
-                .document(userId)
-                .collection("user_reflections")
                 .document(reflectionId)
                 .set(reflection.toMap())
                 .await()
@@ -60,20 +67,36 @@ class ReflectionRepository {
         }
     }
 
-    suspend fun getReflectionsHistory(): Result<List<Reflection>> {
+    suspend fun getReflectionHistory(): Result<List<Reflection>> {
         return try {
             val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
             val snapshot = db.collection(REFLECTIONS_COLLECTION)
-                .document(userId)
-                .collection("user_reflections")
-                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .whereEqualTo("userId", userId)
                 .get()
                 .await()
 
-            val reflections = snapshot.toObjects(Reflection::class.java)
+            val reflections = snapshot.documents.mapNotNull { doc ->
+                try {
+                    Reflection(
+                        id = doc.id,
+                        userId = doc.getString("userId") ?: "",
+                        question = doc.getString("question") ?: "",
+                        answer = doc.getString("answer") ?: "",
+                        date = doc.getString("date") ?: getCurrentDate()
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }.sortedByDescending { it.date }
+
             Result.success(reflections)
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun getCurrentDate(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return sdf.format(Date())
     }
 }

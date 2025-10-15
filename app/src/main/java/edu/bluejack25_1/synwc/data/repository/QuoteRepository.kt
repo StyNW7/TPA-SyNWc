@@ -6,7 +6,7 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.Firebase
 import edu.bluejack25_1.synwc.data.model.Quote
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
+import java.util.*
 
 class QuoteRepository {
     private val db: FirebaseFirestore = Firebase.firestore
@@ -20,27 +20,37 @@ class QuoteRepository {
     suspend fun getDailyQuote(): Result<Quote> {
         return try {
             val quotesSnapshot = db.collection(QUOTES_COLLECTION)
-                .whereEqualTo("category", "daily")
                 .get()
                 .await()
 
-            val quotes = quotesSnapshot.toObjects(Quote::class.java)
+            val quotes = quotesSnapshot.documents.mapNotNull { doc ->
+                try {
+                    Quote(
+                        id = doc.id,
+                        text = doc.getString("text") ?: "",
+                        author = doc.getString("author") ?: "Unknown",
+                        category = doc.getString("category") ?: "daily"
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
             if (quotes.isNotEmpty()) {
+                // Get a random quote
                 val randomQuote = quotes.random()
                 Result.success(randomQuote)
             } else {
-                // Return a default quote if no quotes found
-                Result.success(
-                    Quote(
-                        id = "default",
-                        text = "The only way to do great work is to love what you do.",
-                        author = "Steve Jobs",
-                        category = "daily"
-                    )
-                )
+                // Return default quotes if no quotes found in database
+                val defaultQuotes = getDefaultQuotes()
+                val randomQuote = defaultQuotes.random()
+                Result.success(randomQuote)
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            // Return default quotes in case of error
+            val defaultQuotes = getDefaultQuotes()
+            val randomQuote = defaultQuotes.random()
+            Result.success(randomQuote)
         }
     }
 
@@ -48,7 +58,8 @@ class QuoteRepository {
         return try {
             val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
             val quoteId = UUID.randomUUID().toString()
-            val favoriteQuote = quote.copy(id = quoteId, isFavorite = true)
+
+            val favoriteQuote = quote.copy(id = quoteId)
 
             db.collection(USER_QUOTES_COLLECTION)
                 .document(userId)
@@ -72,7 +83,18 @@ class QuoteRepository {
                 .get()
                 .await()
 
-            val quotes = snapshot.toObjects(Quote::class.java)
+            val quotes = snapshot.documents.mapNotNull { doc ->
+                try {
+                    Quote(
+                        id = doc.id,
+                        text = doc.getString("text") ?: "",
+                        author = doc.getString("author") ?: "Unknown",
+                        category = doc.getString("category") ?: "favorite"
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
             Result.success(quotes)
         } catch (e: Exception) {
             Result.failure(e)
@@ -81,16 +103,71 @@ class QuoteRepository {
 
     suspend fun searchQuotes(query: String): Result<List<Quote>> {
         return try {
+            if (query.isBlank()) {
+                return Result.success(emptyList())
+            }
+
             val snapshot = db.collection(QUOTES_COLLECTION)
-                .whereGreaterThanOrEqualTo("text", query)
-                .whereLessThanOrEqualTo("text", query + "\uf8ff")
                 .get()
                 .await()
 
-            val quotes = snapshot.toObjects(Quote::class.java)
-            Result.success(quotes)
+            val allQuotes = snapshot.documents.mapNotNull { doc ->
+                try {
+                    Quote(
+                        id = doc.id,
+                        text = doc.getString("text") ?: "",
+                        author = doc.getString("author") ?: "Unknown",
+                        category = doc.getString("category") ?: "daily"
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            // Filter quotes locally based on search query
+            val filteredQuotes = allQuotes.filter { quote ->
+                quote.text.contains(query, ignoreCase = true) ||
+                        quote.author.contains(query, ignoreCase = true)
+            }
+
+            Result.success(filteredQuotes)
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun getDefaultQuotes(): List<Quote> {
+        return listOf(
+            Quote(
+                id = "default1",
+                text = "The only way to do great work is to love what you do.",
+                author = "Steve Jobs",
+                category = "daily"
+            ),
+            Quote(
+                id = "default2",
+                text = "Life is what happens to you while you're busy making other plans.",
+                author = "John Lennon",
+                category = "daily"
+            ),
+            Quote(
+                id = "default3",
+                text = "The future belongs to those who believe in the beauty of their dreams.",
+                author = "Eleanor Roosevelt",
+                category = "daily"
+            ),
+            Quote(
+                id = "default4",
+                text = "It is during our darkest moments that we must focus to see the light.",
+                author = "Aristotle",
+                category = "daily"
+            ),
+            Quote(
+                id = "default5",
+                text = "Whoever is happy will make others happy too.",
+                author = "Anne Frank",
+                category = "daily"
+            )
+        )
     }
 }

@@ -14,6 +14,10 @@
     import com.google.firebase.FirebaseApp
     import com.google.firebase.auth.auth
     import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
+    import edu.bluejack25_1.synwc.util.seeder.QuoteSeeder
+    import kotlinx.coroutines.CoroutineScope
+    import kotlinx.coroutines.Dispatchers
+    import kotlinx.coroutines.launch
 
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,5 +45,11 @@
                     }
                 }
             }
+
+            CoroutineScope(Dispatchers.IO).launch {
+                val seeder = QuoteSeeder()
+                seeder.seedQuotes()
+            }
+
         }
     }

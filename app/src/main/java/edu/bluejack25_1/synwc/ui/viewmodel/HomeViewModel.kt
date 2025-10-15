@@ -9,21 +9,16 @@ import edu.bluejack25_1.synwc.data.model.Quote
 import edu.bluejack25_1.synwc.data.model.Reflection
 import edu.bluejack25_1.synwc.data.repository.QuoteRepository
 import edu.bluejack25_1.synwc.data.repository.ReflectionRepository
-import edu.bluejack25_1.synwc.data.repository.StreakRepository
-import edu.bluejack25_1.synwc.data.repository.UserRepository
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 class HomeViewModel : ViewModel() {
     private val quoteRepository = QuoteRepository()
     private val reflectionRepository = ReflectionRepository()
-    private val streakRepository = StreakRepository()
-    private val userRepository = UserRepository()
 
-    // States
+    // Quote States
     var currentQuote by mutableStateOf<Quote?>(null)
-        private set
-
-    var favoriteQuotes by mutableStateOf<List<Quote>>(emptyList())
         private set
 
     var searchQuery by mutableStateOf("")
@@ -32,6 +27,13 @@ class HomeViewModel : ViewModel() {
     var searchResults by mutableStateOf<List<Quote>>(emptyList())
         private set
 
+    var showFavoriteQuotes by mutableStateOf(false)
+        private set
+
+    var favoriteQuotes by mutableStateOf<List<Quote>>(emptyList())
+        private set
+
+    // Reflection States
     var dailyQuestion by mutableStateOf("")
         private set
 
@@ -44,16 +46,13 @@ class HomeViewModel : ViewModel() {
     var showReflectionHistory by mutableStateOf(false)
         private set
 
-    var showFavoriteQuotes by mutableStateOf(false)
-        private set
-
+    // Common States
     var isLoading by mutableStateOf(false)
         private set
 
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    // Initialize
     init {
         loadInitialData()
     }
@@ -61,12 +60,16 @@ class HomeViewModel : ViewModel() {
     private fun loadInitialData() {
         viewModelScope.launch {
             isLoading = true
-            updateLoginStreak()
-            loadDailyQuote()
-            loadDailyReflectionQuestion()
-            loadReflectionHistory()
-            loadFavoriteQuotes()
-            isLoading = false
+            try {
+                loadDailyQuote()
+                loadDailyReflectionQuestion()
+                loadReflectionHistory()
+                loadFavoriteQuotes()
+            } catch (e: Exception) {
+                errorMessage = "Failed to load initial data: ${e.message}"
+            } finally {
+                isLoading = false
+            }
         }
     }
 
@@ -74,36 +77,60 @@ class HomeViewModel : ViewModel() {
     fun loadDailyQuote() {
         viewModelScope.launch {
             isLoading = true
-            val result = quoteRepository.getDailyQuote()
-            result.onSuccess { quote ->
-                currentQuote = quote
-            }.onFailure {
-                errorMessage = "Failed to load quote: ${it.message}"
+            try {
+                val result = quoteRepository.getDailyQuote()
+                result.onSuccess { quote ->
+                    currentQuote = quote
+                    errorMessage = null
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load quote: ${exception.message}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception loading quote: ${e.message}"
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
     }
 
     fun saveFavoriteQuote() {
         viewModelScope.launch {
+            isLoading = true
             currentQuote?.let { quote ->
-                val result = quoteRepository.saveFavoriteQuote(quote)
-                result.onSuccess {
-                    loadFavoriteQuotes()
-                }.onFailure {
-                    errorMessage = "Failed to save favorite quote: ${it.message}"
+                try {
+                    val result = quoteRepository.saveFavoriteQuote(quote)
+                    result.onSuccess { quoteId ->
+                        errorMessage = null
+                        // Reload favorites to include the new one
+                        loadFavoriteQuotes()
+                    }.onFailure { exception ->
+                        errorMessage = "Failed to save favorite: ${exception.message}"
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Exception saving favorite: ${e.message}"
                 }
+            } ?: run {
+                errorMessage = "No quote to save as favorite"
             }
+            isLoading = false
         }
     }
 
     fun loadFavoriteQuotes() {
         viewModelScope.launch {
-            val result = quoteRepository.getFavoriteQuotes()
-            result.onSuccess { quotes ->
-                favoriteQuotes = quotes
-            }.onFailure {
-                errorMessage = "Failed to load favorite quotes: ${it.message}"
+            isLoading = true
+            try {
+                val result = quoteRepository.getFavoriteQuotes()
+                result.onSuccess { quotes ->
+                    favoriteQuotes = quotes
+                    errorMessage = null
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load favorites: ${exception.message}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception loading favorites: ${e.message}"
+            } finally {
+                isLoading = false
             }
         }
     }
@@ -116,22 +143,35 @@ class HomeViewModel : ViewModel() {
 
         viewModelScope.launch {
             isLoading = true
-            val result = quoteRepository.searchQuotes(searchQuery)
-            result.onSuccess { quotes ->
-                searchResults = quotes
-            }.onFailure {
-                errorMessage = "Failed to search quotes: ${it.message}"
+            try {
+                val result = quoteRepository.searchQuotes(searchQuery)
+                result.onSuccess { quotes ->
+                    searchResults = quotes
+                    errorMessage = null
+                }.onFailure { exception ->
+                    errorMessage = "Failed to search quotes: ${exception.message}"
+                    searchResults = emptyList()
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception searching quotes: ${e.message}"
                 searchResults = emptyList()
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
     }
 
     fun updateSearchQuery(query: String) {
         searchQuery = query
-        // Clear search results when query is cleared
         if (query.isBlank()) {
             searchResults = emptyList()
+        }
+    }
+
+    fun toggleFavoriteQuotes() {
+        showFavoriteQuotes = !showFavoriteQuotes
+        if (showFavoriteQuotes) {
+            loadFavoriteQuotes()
         }
     }
 
@@ -139,15 +179,67 @@ class HomeViewModel : ViewModel() {
     fun loadDailyReflectionQuestion() {
         viewModelScope.launch {
             isLoading = true
-            val result = reflectionRepository.getDailyReflectionQuestion()
-            result.onSuccess { question ->
-                dailyQuestion = question
-            }.onFailure {
-                errorMessage = "Failed to load reflection question: ${it.message}"
-                // Set a default question if loading fails
-                dailyQuestion = "What are you grateful for today?"
+            try {
+                val result = reflectionRepository.getDailyQuestion()
+                result.onSuccess { question ->
+                    dailyQuestion = question
+                    reflectionAnswer = "" // Clear previous answer
+                    errorMessage = null
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load reflection question: ${exception.message}"
+                    // Set a default question if loading fails
+                    dailyQuestion = "What are you grateful for today?"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception loading reflection question: ${e.message}"
+                dailyQuestion = "What made you smile today?"
+            } finally {
+                isLoading = false
             }
-            isLoading = false
+        }
+    }
+
+    fun saveReflection() {
+        if (reflectionAnswer.isBlank()) {
+            errorMessage = "Please write your reflection before saving"
+            return
+        }
+
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val result = reflectionRepository.saveReflection(dailyQuestion, reflectionAnswer)
+                result.onSuccess {
+                    errorMessage = null
+                    reflectionAnswer = "" // Clear answer after saving
+                    loadReflectionHistory() // Refresh history
+                }.onFailure { exception ->
+                    errorMessage = "Failed to save reflection: ${exception.message}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception saving reflection: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun loadReflectionHistory() {
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val result = reflectionRepository.getReflectionHistory()
+                result.onSuccess { reflections ->
+                    reflectionHistory = reflections
+                    errorMessage = null
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load reflection history: ${exception.message}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception loading reflection history: ${e.message}"
+            } finally {
+                isLoading = false
+            }
         }
     }
 
@@ -155,68 +247,14 @@ class HomeViewModel : ViewModel() {
         reflectionAnswer = answer
     }
 
-    fun saveReflection() {
-        if (reflectionAnswer.isBlank()) {
-            errorMessage = "Please write your reflection first"
-            return
-        }
-
-        viewModelScope.launch {
-            isLoading = true
-            val result = reflectionRepository.saveReflection(dailyQuestion, reflectionAnswer)
-            result.onSuccess {
-                updateReflectionStreak()
-                reflectionAnswer = ""
-                loadReflectionHistory()
-                errorMessage = null
-                // Load a new question after saving
-                loadDailyReflectionQuestion()
-            }.onFailure {
-                errorMessage = "Failed to save reflection: ${it.message}"
-            }
-            isLoading = false
-        }
-    }
-
-    fun loadReflectionHistory() {
-        viewModelScope.launch {
-            val result = reflectionRepository.getReflectionsHistory()
-            result.onSuccess { reflections ->
-                reflectionHistory = reflections
-            }.onFailure {
-                errorMessage = "Failed to load reflection history: ${it.message}"
-            }
-        }
-    }
-
-    // Streak Functions
-    private fun updateLoginStreak() {
-        viewModelScope.launch {
-            streakRepository.updateLoginStreak()
-        }
-    }
-
-    private fun updateReflectionStreak() {
-        viewModelScope.launch {
-            streakRepository.updateReflectionStreak()
-        }
-    }
-
-    // UI State Functions
     fun toggleReflectionHistory() {
         showReflectionHistory = !showReflectionHistory
-        if (showReflectionHistory && reflectionHistory.isEmpty()) {
+        if (showReflectionHistory) {
             loadReflectionHistory()
         }
     }
 
-    fun toggleFavoriteQuotes() {
-        showFavoriteQuotes = !showFavoriteQuotes
-        if (showFavoriteQuotes && favoriteQuotes.isEmpty()) {
-            loadFavoriteQuotes()
-        }
-    }
-
+    // Common Functions
     fun clearError() {
         errorMessage = null
     }
