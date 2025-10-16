@@ -15,17 +15,17 @@ class OnboardingViewModel : ViewModel() {
 
     private val pages = listOf(
         OnboardingPage(
-            imageRes = R.drawable.ic_book,
+            imageRes = R.drawable.ic_book_nobg,
             title = "Simple & Minimalist To-do List",
             description = "Write down all your tasks on your to-do list."
         ),
         OnboardingPage(
-            imageRes = R.drawable.ic_message,
+            imageRes = R.drawable.ic_message_nobg,
             title = "Daily Quotes for Inspiration",
             description = "Get fresh motivational quotes every day."
         ),
         OnboardingPage(
-            imageRes = R.drawable.ic_quote,
+            imageRes = R.drawable.ic_quote_nobg,
             title = "Reflect & Grow",
             description = "Write reflections and track your daily progress."
         )

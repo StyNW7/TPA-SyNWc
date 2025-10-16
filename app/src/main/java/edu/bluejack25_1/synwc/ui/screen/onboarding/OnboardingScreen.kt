@@ -1,5 +1,8 @@
 package edu.bluejack25_1.synwc.ui.screen.onboarding
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,7 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,141 +38,270 @@ fun OnboardingScreen(
     val pagerState = rememberPagerState()
     val totalPages = viewModel.getTotalPages()
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Image Pager
-        HorizontalPager(
-            count = totalPages,
-            state = pagerState,
-            modifier = Modifier.weight(1f)
-        ) { page ->
-            val data = viewModel.getPageData(page)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Image(
-                    painter = painterResource(id = data.imageRes),
-                    contentDescription = data.title,
-                    modifier = Modifier
-                        .size(180.dp)
-                        .padding(16.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        MaterialTheme.colorScheme.background
+                    )
                 )
-            }
-        }
-
-        // Bottom Card
-        Surface(
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            color = MaterialTheme.colorScheme.primary,
+            )
+    ) {
+        // Decorative background elements
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(250.dp)
-        ) {
-            val currentPage = pagerState.currentPage
-            val pageData = viewModel.getPageData(currentPage)
+                .size(350.dp)
+                .offset(x = (-120).dp, y = (-80).dp)
+                .background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    CircleShape
+                )
+                .blur(80.dp)
+        )
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxSize()
-            ) {
-                // Page Indicators
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .size(280.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 100.dp, y = 100.dp)
+                .background(
+                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.06f),
+                    CircleShape
+                )
+                .blur(70.dp)
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(60.dp))
+
+            // Image Pager with enhanced presentation
+            HorizontalPager(
+                count = totalPages,
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                val data = viewModel.getPageData(page)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    repeat(totalPages) { index ->
-                        val isSelected = index == currentPage
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        // Glow effect behind image
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .size(if (isSelected) 10.dp else 8.dp)
-                                .clip(CircleShape)
+                                .size(220.dp)
                                 .background(
-                                    if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    CircleShape
                                 )
+                                .blur(40.dp)
                         )
+
+                        // Image with shadow and elevated feel
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 12.dp,
+                            modifier = Modifier
+                                .size(200.dp)
+                                .offset(y = (-10).dp)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = data.imageRes),
+                                    contentDescription = data.title,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            // Enhanced Bottom Card with glassmorphism effect
+            Surface(
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 24.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Box {
+                    // Gradient overlay for depth
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.02f)
+                                    )
+                                )
+                            )
+                    )
 
-                // Title
-                Text(
-                    text = pageData.title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
+                    val currentPage = pagerState.currentPage
+                    val pageData = viewModel.getPageData(currentPage)
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Description
-                Text(
-                    text = pageData.description,
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = {
-                        if (pagerState.currentPage == totalPages - 1) {
-                            onGetStartedClick()
-                        } else {
-                            viewModel.skipToEnd()
-                        }
-                    }) {
-                        Text(
-                            text = "Skip",
-                            color = Color.White,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    val currentPage by viewModel.currentPage.collectAsState()
-
-                    LaunchedEffect(currentPage) {
-                        pagerState.animateScrollToPage(currentPage)
-                    }
-
-                    Button(
-                        onClick = {
-                            if (pagerState.currentPage < totalPages - 1) {
-                                viewModel.nextPage()
-                            } else {
-                                viewModel.skipToEnd()
-                            }
-                        },
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                        modifier = Modifier.size(48.dp)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .padding(horizontal = 32.dp, vertical = 36.dp)
+                            .fillMaxWidth()
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_arrow_right),
-                            contentDescription = "Next",
-                            tint = MaterialTheme.colorScheme.primary
+                        // Modern Page Indicators
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            repeat(totalPages) { index ->
+                                val isSelected = index == currentPage
+                                val width by animateDpAsState(
+                                    targetValue = if (isSelected) 32.dp else 8.dp,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                    label = "indicator_width"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 4.dp)
+                                        .width(width)
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(
+                                            if (isSelected) {
+                                                Brush.horizontalGradient(
+                                                    colors = listOf(
+                                                        MaterialTheme.colorScheme.primary,
+                                                        MaterialTheme.colorScheme.secondary
+                                                    )
+                                                )
+                                            } else {
+                                                Brush.horizontalGradient(
+                                                    colors = listOf(
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                                    )
+                                                )
+                                            }
+                                        )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(28.dp))
+
+                        // Title with modern typography
+                        Text(
+                            text = pageData.title,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            letterSpacing = 0.5.sp,
+                            lineHeight = 32.sp
                         )
 
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Description with refined styling
+                        Text(
+                            text = pageData.description,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 22.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // Enhanced Navigation Buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Skip button with modern styling
+                            TextButton(
+                                onClick = {
+                                    if (pagerState.currentPage == totalPages - 1) {
+                                        onGetStartedClick()
+                                    } else {
+                                        viewModel.skipToEnd()
+                                    }
+                                },
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Skip",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+
+                            val currentPage by viewModel.currentPage.collectAsState()
+
+                            LaunchedEffect(currentPage) {
+                                pagerState.animateScrollToPage(currentPage)
+                            }
+
+                            // Next/Get Started button with elevated design
+                            Button(
+                                onClick = {
+                                    if (pagerState.currentPage < totalPages - 1) {
+                                        viewModel.nextPage()
+                                    } else {
+                                        viewModel.skipToEnd()
+                                    }
+                                },
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(
+                                    defaultElevation = 8.dp,
+                                    pressedElevation = 12.dp
+                                ),
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .shadow(
+                                        elevation = 12.dp,
+                                        shape = CircleShape,
+                                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                    )
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_arrow_right),
+                                    contentDescription = "Next",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
