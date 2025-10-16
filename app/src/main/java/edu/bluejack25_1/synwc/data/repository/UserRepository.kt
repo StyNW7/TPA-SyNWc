@@ -14,9 +14,6 @@ class UserRepository {
 
     companion object {
         private const val USERS_COLLECTION = "users"
-        private const val NOTES_COLLECTION = "notes"
-        private const val REFLECTIONS_COLLECTION = "reflections"
-        private const val QUOTES_COLLECTION = "quotes"
     }
 
     suspend fun createUser(user: User): Result<Unit> {
@@ -57,7 +54,38 @@ class UserRepository {
         return try {
             db.collection(USERS_COLLECTION)
                 .document(user.id)
-                .update(user.toMap() as Map<String, Any>)
+                .set(user.toMap())
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserProfile(userId: String, name: String, email: String): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "name" to name,
+                "email" to email
+            )
+            db.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(updates)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateProfileImage(userId: String, imageUrl: String): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "profileImageUrl" to imageUrl
+            )
+            db.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(updates)
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -68,8 +96,8 @@ class UserRepository {
     suspend fun updateStreak(userId: String, newStreak: Int): Result<Unit> {
         return try {
             val updates = mapOf(
-                "streakCount" to newStreak,
-                "lastActiveDate" to User.getCurrentDate()
+                "loginStreak" to newStreak,
+                "lastLoginDate" to User.getCurrentDate()
             )
             db.collection(USERS_COLLECTION)
                 .document(userId)
@@ -87,31 +115,6 @@ class UserRepository {
                 .document(userId)
                 .update(updates)
                 .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun updateUserProfile(userId: String, name: String, email: String): Result<Unit> {
-        return try {
-            val updates = mapOf(
-                "name" to name,
-                "email" to email
-            )
-            db.document(userId).update(updates).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun updateProfileImage(userId: String, imageUrl: String): Result<Unit> {
-        return try {
-            val updates = mapOf(
-                "profileImageUrl" to imageUrl
-            )
-            db.document(userId).update(updates).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

@@ -1,18 +1,24 @@
 package edu.bluejack25_1.synwc.ui.viewmodel
 
 import android.content.Context
+import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.bluejack25_1.synwc.data.preferences.AppPreferences
+import edu.bluejack25_1.synwc.data.repository.UserRepository
+import edu.bluejack25_1.synwc.util.CloudinaryManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(context: Context) : ViewModel() {
     private val preferences = AppPreferences(context)
+    private val userRepository = UserRepository()
+    private val cloudinaryManager = CloudinaryManager(context)
 
     // Theme state
     val themeMode = preferences.themeMode
@@ -32,6 +38,9 @@ class SettingsViewModel(context: Context) : ViewModel() {
     var showEditProfileDialog by mutableStateOf(false)
         private set
 
+    var showImagePicker by mutableStateOf(false)
+        private set
+
     var isLoading by mutableStateOf(false)
         private set
 
@@ -42,6 +51,9 @@ class SettingsViewModel(context: Context) : ViewModel() {
         private set
 
     var editedEmail by mutableStateOf("")
+        private set
+
+    var selectedImageUri by mutableStateOf<Uri?>(null)
         private set
 
     // Actions
@@ -82,19 +94,127 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // Save to local preferences
-                preferences.setUserName(editedName)
-                preferences.setUserEmail(editedEmail)
+                val userId = userRepository.getCurrentUserId()
+                Log.d("SettingsViewModel", "Updating profile for user: $userId")
 
-                // Simulate API call delay
-                kotlinx.coroutines.delay(1000)
+                // Update to Firestore
+                val result = userRepository.updateUserProfile(userId, editedName, editedEmail)
 
-                showEditProfileDialog = false
-                isLoading = false
+                result.onSuccess {
+                    // Save to local preferences
+                    preferences.setUserName(editedName)
+                    preferences.setUserEmail(editedEmail)
+
+                    Log.d("SettingsViewModel", "Profile updated successfully")
+                    showEditProfileDialog = false
+                    isLoading = false
+                }.onFailure { exception ->
+                    errorMessage = "Failed to update profile: ${exception.message}"
+                    Log.e("SettingsViewModel", "Profile update failed: ${exception.message}", exception)
+                    isLoading = false
+                }
             } catch (e: Exception) {
                 errorMessage = "Error updating profile: ${e.message}"
+                Log.e("SettingsViewModel", "Profile update error: ${e.message}", e)
                 isLoading = false
             }
+        }
+    }
+
+    fun showImagePicker() {
+        showImagePicker = true
+        errorMessage = null
+        Log.d("SettingsViewModel", "Showing image picker")
+    }
+
+    fun hideImagePicker() {
+        showImagePicker = false
+        errorMessage = null
+        Log.d("SettingsViewModel", "Hiding image picker")
+    }
+
+    fun updateImageUri(uri: Uri?) {
+        selectedImageUri = uri
+        Log.d("SettingsViewModel", "Image URI updated: $uri")
+    }
+
+    fun uploadProfileImage() {
+        selectedImageUri?.let { uri ->
+            isLoading = true
+            errorMessage = null
+            Log.d("SettingsViewModel", "Starting image upload for URI: $uri")
+
+            viewModelScope.launch {
+                try {
+                    // Try the InputStream method first (more reliable for content URIs)
+                    val uploadResult = cloudinaryManager.uploadImageWithInputStream(uri)
+
+                    uploadResult.onSuccess { imageUrl ->
+                        Log.d("SettingsViewModel", "Image uploaded to Cloudinary: $imageUrl")
+
+                        // Update Firestore with new image URL
+                        val userId = userRepository.getCurrentUserId()
+                        Log.d("SettingsViewModel", "Updating profile image for user: $userId")
+
+                        val updateResult = userRepository.updateProfileImage(userId, imageUrl)
+
+                        updateResult.onSuccess {
+                            // Save to local preferences
+                            preferences.setProfileImageUrl(imageUrl)
+
+                            Log.d("SettingsViewModel", "Profile image updated successfully")
+                            showImagePicker = false
+                            selectedImageUri = null
+                            isLoading = false
+                        }.onFailure { exception ->
+                            errorMessage = "Failed to update profile image: ${exception.message}"
+                            Log.e("SettingsViewModel", "Profile image update failed: ${exception.message}", exception)
+                            isLoading = false
+                        }
+                    }.onFailure { exception ->
+                        // Fallback: Try the file method if InputStream fails
+                        Log.w("SettingsViewModel", "InputStream method failed, trying file method: ${exception.message}")
+                        tryFileUploadMethod(uri)
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Error uploading image: ${e.message}"
+                    Log.e("SettingsViewModel", "Image upload error: ${e.message}", e)
+                    isLoading = false
+                }
+            }
+        } ?: run {
+            Log.e("SettingsViewModel", "No image URI selected for upload")
+            showImagePicker = false
+        }
+    }
+
+    private suspend fun tryFileUploadMethod(uri: Uri) {
+        try {
+            val uploadResult = cloudinaryManager.uploadImage(uri)
+
+            uploadResult.onSuccess { imageUrl ->
+                Log.d("SettingsViewModel", "Image uploaded to Cloudinary (file method): $imageUrl")
+
+                val userId = userRepository.getCurrentUserId()
+                val updateResult = userRepository.updateProfileImage(userId, imageUrl)
+
+                updateResult.onSuccess {
+                    preferences.setProfileImageUrl(imageUrl)
+                    showImagePicker = false
+                    selectedImageUri = null
+                    isLoading = false
+                }.onFailure { exception ->
+                    errorMessage = "Failed to update profile image: ${exception.message}"
+                    isLoading = false
+                }
+            }.onFailure { exception ->
+                errorMessage = "Failed to upload image: ${exception.message}"
+                Log.e("SettingsViewModel", "File upload method also failed: ${exception.message}", exception)
+                isLoading = false
+            }
+        } catch (e: Exception) {
+            errorMessage = "Both upload methods failed: ${e.message}"
+            isLoading = false
         }
     }
 
@@ -102,11 +222,29 @@ class SettingsViewModel(context: Context) : ViewModel() {
         isLoading = true
         viewModelScope.launch {
             try {
-                // Simulate loading data
-                kotlinx.coroutines.delay(1000)
-                isLoading = false
+                val userId = userRepository.getCurrentUserId()
+                Log.d("SettingsViewModel", "Loading user data for: $userId")
+
+                val result = userRepository.getUser(userId)
+
+                result.onSuccess { user ->
+                    // Update local preferences with Firestore data
+                    preferences.setUserName(user.name)
+                    preferences.setUserEmail(user.email)
+                    user.profileImageUrl?.let {
+                        preferences.setProfileImageUrl(it)
+                        Log.d("SettingsViewModel", "Loaded profile image URL: $it")
+                    }
+                    Log.d("SettingsViewModel", "User data loaded successfully")
+                    isLoading = false
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load user data: ${exception.message}"
+                    Log.e("SettingsViewModel", "User data load failed: ${exception.message}", exception)
+                    isLoading = false
+                }
             } catch (e: Exception) {
-                errorMessage = "Error loading data: ${e.message}"
+                errorMessage = "Authentication error: ${e.message}"
+                Log.e("SettingsViewModel", "User data load error: ${e.message}", e)
                 isLoading = false
             }
         }

@@ -22,15 +22,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import edu.bluejack25_1.synwc.ui.component.BeautifulBottomNavigationBar
 import edu.bluejack25_1.synwc.ui.viewmodel.SettingsViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.SettingsViewModelFactory
+import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
+import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
+import edu.bluejack25_1.synwc.util.ImagePicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
+    authViewModel: AuthViewModel = viewModel(),
+    userViewModel: UserViewModel = viewModel(),
     context: Context = LocalContext.current
 ) {
+
+    val currentUser by userViewModel.currentUser.collectAsState()
+    val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
+
     // Use the factory pattern for ViewModel initialization
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModelFactory(context)
@@ -45,16 +55,59 @@ fun SettingsScreen(
     val isLoading = settingsViewModel.isLoading
     val errorMessage = settingsViewModel.errorMessage
 
-    // Load user data when screen is first displayed
-    LaunchedEffect(Unit) {
-        settingsViewModel.loadUserData()
+    // Track when profile image updates to force recomposition
+    var imageUpdateTrigger by remember { mutableStateOf(0) }
+
+    // Initialize ImagePicker
+    val imagePicker = ImagePicker()
+    val pickImageLauncher = imagePicker.rememberImagePicker { uri ->
+        settingsViewModel.updateImageUri(uri)
+        if (uri != null) {
+            // Automatically upload when image is selected
+            settingsViewModel.uploadProfileImage()
+        }
     }
 
-    // Handle error messages
+    // Load user data when screen appears
+    LaunchedEffect(Unit) {
+        authViewModel.checkAuthState()
+        if (userLoggedIn) {
+            userViewModel.loadCurrentUser()
+            settingsViewModel.loadUserData()
+        }
+    }
+
+    // Observe profile image URL changes and trigger recomposition
+    LaunchedEffect(profileImageUrl) {
+        if (profileImageUrl.isNotEmpty()) {
+            imageUpdateTrigger++
+        }
+    }
+
+    // Handle successful image upload
+    LaunchedEffect(isLoading) {
+        if (!isLoading && settingsViewModel.selectedImageUri == null) {
+            // Image upload completed successfully, trigger refresh
+            imageUpdateTrigger++
+        }
+    }
+
+    // Handle errors with snackbar
     if (!errorMessage.isNullOrEmpty()) {
         LaunchedEffect(errorMessage) {
-            // Show snackbar or handle error
+            // You can show a snackbar here
+            println("Settings Error: $errorMessage")
         }
+    }
+
+    // Redirect to login if not logged in
+    if (!userLoggedIn) {
+        LaunchedEffect(userLoggedIn) {
+            navController.navigate("login") {
+                popUpTo("home") { inclusive = true }
+            }
+        }
+        return
     }
 
     Scaffold(
@@ -63,12 +116,29 @@ fun SettingsScreen(
                 title = {
                     Text(
                         "Settings",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        authViewModel.logout()
+                        navController.navigate("login") {
+                            popUpTo("settings") { inclusive = true }
+                        }
+                    }) {
+                        Icon(Icons.Default.Logout, contentDescription = "Logout")
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
-        }
+        },
+        bottomBar = {
+            BeautifulBottomNavigationBar(navController = navController)
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
@@ -84,11 +154,9 @@ fun SettingsScreen(
                             userName = userName,
                             userEmail = userEmail,
                             profileImageUrl = profileImageUrl,
+                            isLoading = isLoading,
                             onEditProfile = { settingsViewModel.showEditProfile() },
-                            onChangePhoto = {
-                                // For now, just show edit profile since image picker might be causing issues
-                                settingsViewModel.showEditProfile()
-                            }
+                            onChangePhoto = { settingsViewModel.showImagePicker() }
                         )
                     }
                 }
@@ -114,8 +182,27 @@ fun SettingsScreen(
                 item {
                     SettingsSection(title = "Data") {
                         SyncSection(
-                            onSyncData = { settingsViewModel.loadUserData() },
+                            onSyncData = {
+                                settingsViewModel.loadUserData()
+                                imageUpdateTrigger++ // Force image refresh
+                            },
                             isLoading = isLoading
+                        )
+                    }
+                }
+
+                // Debug Section (remove in production)
+                item {
+                    SettingsSection(title = "Debug Info") {
+                        DebugInfoCard(
+                            profileImageUrl = profileImageUrl,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            imageUpdateTrigger = imageUpdateTrigger,
+                            onReload = {
+                                settingsViewModel.loadUserData()
+                                imageUpdateTrigger++
+                            }
                         )
                     }
                 }
@@ -129,7 +216,11 @@ fun SettingsScreen(
                         .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Uploading image...", color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
             }
 
@@ -143,28 +234,18 @@ fun SettingsScreen(
                     errorMessage = errorMessage
                 )
             }
-        }
-    }
-}
 
-@Composable
-fun SettingsSection(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        content()
+            // Image picker dialog
+            if (settingsViewModel.showImagePicker) {
+                ImagePickerDialog(
+                    onPickFromGallery = {
+                        pickImageLauncher()
+                        settingsViewModel.hideImagePicker()
+                    },
+                    onDismiss = { settingsViewModel.hideImagePicker() }
+                )
+            }
+        }
     }
 }
 
@@ -173,6 +254,7 @@ fun ProfileCard(
     userName: String,
     userEmail: String,
     profileImageUrl: String,
+    isLoading: Boolean,
     onEditProfile: () -> Unit,
     onChangePhoto: () -> Unit
 ) {
@@ -189,49 +271,12 @@ fun ProfileCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Profile Image
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { onChangePhoto() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (profileImageUrl.isNotEmpty()) {
-                        Image(
-                            painter = rememberAsyncImagePainter(profileImageUrl),
-                            contentDescription = "Profile picture",
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Profile picture",
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Edit icon overlay
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f))
-                            .clip(CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Change photo",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
+                // Profile Image with better loading states
+                ProfileImage(
+                    profileImageUrl = profileImageUrl,
+                    isLoading = isLoading,
+                    onChangePhoto = onChangePhoto
+                )
 
                 Spacer(modifier = Modifier.width(16.dp))
 
@@ -257,7 +302,8 @@ fun ProfileCard(
                 // Edit Button
                 IconButton(
                     onClick = onEditProfile,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp),
+                    enabled = !isLoading
                 ) {
                     Icon(
                         Icons.Default.Edit,
@@ -267,6 +313,171 @@ fun ProfileCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ProfileImage(
+    profileImageUrl: String,
+    isLoading: Boolean,
+    onChangePhoto: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(
+                enabled = !isLoading,
+                onClick = onChangePhoto
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isLoading) {
+            // Show loading indicator while uploading
+            CircularProgressIndicator(
+                modifier = Modifier.size(30.dp),
+                strokeWidth = 2.dp
+            )
+        } else if (profileImageUrl.isNotEmpty()) {
+            // Show profile image with proper caching
+            Image(
+                painter = rememberAsyncImagePainter(
+                    model = profileImageUrl,
+                    onSuccess = {
+                        println("Profile image loaded successfully: $profileImageUrl")
+                    },
+                    onError = {
+                        println("Failed to load profile image: $profileImageUrl")
+                    }
+                ),
+                contentDescription = "Profile picture",
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            // Show placeholder when no image
+            Icon(
+                Icons.Default.Person,
+                contentDescription = "Profile picture",
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Edit icon overlay (only show when not loading)
+        if (!isLoading) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f))
+                    .clip(CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Change photo",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ImagePickerDialog(
+    onPickFromGallery: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change Profile Picture") },
+        text = { Text("Choose how you want to set your profile picture") },
+        confirmButton = {
+            Button(onClick = onPickFromGallery) {
+                Text("Choose from Gallery")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun DebugInfoCard(
+    profileImageUrl: String,
+    isLoading: Boolean,
+    errorMessage: String?,
+    imageUpdateTrigger: Int,
+    onReload: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                "Debug Information:",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text("Image URL: ${profileImageUrl.ifEmpty { "Empty" }}",
+                style = MaterialTheme.typography.bodySmall)
+            Text("URL Length: ${profileImageUrl.length}",
+                style = MaterialTheme.typography.bodySmall)
+            Text("Loading: $isLoading",
+                style = MaterialTheme.typography.bodySmall)
+            Text("Error: ${errorMessage ?: "None"}",
+                style = MaterialTheme.typography.bodySmall)
+            Text("Image Update Trigger: $imageUpdateTrigger",
+                style = MaterialTheme.typography.bodySmall)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = onReload,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Reload User Data")
+            }
+        }
+    }
+}
+
+// The rest of your composable functions remain the same (SettingsSection, ThemeSelector, ThemeOption, AboutSection, SyncSection, EditProfileDialog)
+@Composable
+fun SettingsSection(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        content()
     }
 }
 

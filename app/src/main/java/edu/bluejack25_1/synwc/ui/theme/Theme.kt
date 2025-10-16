@@ -28,7 +28,7 @@ private val DarkColorScheme = darkColorScheme(
 @Composable
 fun SyNWcTheme(
 //    darkTheme: Boolean = isSystemInDarkTheme(), // auto follows system setting
-    darkTheme: Boolean = false, // default light theme
+    darkTheme: Boolean = true, // default light theme
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

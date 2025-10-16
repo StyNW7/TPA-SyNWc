@@ -56,9 +56,6 @@ fun HomeScreen(
     // Handle errors with explicit type
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
-            // You can show a snackbar here
-            // For now, we'll just clear the error after a delay
-            // homeViewModel.clearError()
         }
     }
 

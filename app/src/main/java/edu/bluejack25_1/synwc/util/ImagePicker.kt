@@ -7,25 +7,18 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 
 class ImagePicker {
     @Composable
-    fun rememberImagePicker(
-        onImageSelected: (Uri?) -> Unit
-    ): () -> Unit {
-        val context = LocalContext.current
+    fun rememberImagePicker(onImagePicked: (Uri?) -> Unit): () -> Unit {
         val launcher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetContent()
         ) { uri: Uri? ->
-            onImageSelected(uri)
+            onImagePicked(uri)
         }
 
-        return remember {
-            {
-                launcher.launch("image/*")
-            }
+        return {
+            launcher.launch("image/*")
         }
     }
 }
