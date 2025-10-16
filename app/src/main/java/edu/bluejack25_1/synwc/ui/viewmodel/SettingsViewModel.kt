@@ -37,15 +37,15 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
     }
 
-    // User profile state
-    val userName = preferences.userName
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    // User profile state - use StateFlow to ensure fresh data
+    private val _userName = MutableStateFlow("")
+    val userName: StateFlow<String> = _userName.asStateFlow()
 
-    val userEmail = preferences.userEmail
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    private val _userEmail = MutableStateFlow("")
+    val userEmail: StateFlow<String> = _userEmail.asStateFlow()
 
-    val profileImageUrl = preferences.profileImageUrl
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    private val _profileImageUrl = MutableStateFlow("")
+    val profileImageUrl: StateFlow<String> = _profileImageUrl.asStateFlow()
 
     // UI state
     var showEditProfileDialog by mutableStateOf(false)
@@ -78,10 +78,9 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
     }
 
-    // ... rest of your existing methods (showEditProfile, saveProfile, uploadProfileImage, etc.)
     fun showEditProfile() {
-        editedName = userName.value
-        editedEmail = userEmail.value
+        editedName = _userName.value
+        editedEmail = _userEmail.value
         showEditProfileDialog = true
         errorMessage = null
     }
@@ -117,7 +116,11 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 val result = userRepository.updateUserProfile(userId, editedName, editedEmail)
 
                 result.onSuccess {
-                    // Save to local preferences
+                    // Update local state immediately
+                    _userName.value = editedName
+                    _userEmail.value = editedEmail
+
+                    // Also save to preferences for persistence
                     preferences.setUserName(editedName)
                     preferences.setUserEmail(editedEmail)
 
@@ -179,7 +182,10 @@ class SettingsViewModel(context: Context) : ViewModel() {
                         val updateResult = userRepository.updateProfileImage(userId, secureImageUrl)
 
                         updateResult.onSuccess {
-                            // Save to local preferences
+                            // Update local state immediately
+                            _profileImageUrl.value = secureImageUrl
+
+                            // Also save to preferences for persistence
                             preferences.setProfileImageUrl(secureImageUrl)
 
                             Log.d("SettingsViewModel", "Profile image updated successfully")
@@ -222,7 +228,12 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 val updateResult = userRepository.updateProfileImage(userId, secureImageUrl)
 
                 updateResult.onSuccess {
+                    // Update local state immediately
+                    _profileImageUrl.value = secureImageUrl
+
+                    // Also save to preferences for persistence
                     preferences.setProfileImageUrl(secureImageUrl)
+
                     showImagePicker = false
                     selectedImageUri = null
                     isLoading = false
@@ -259,14 +270,26 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 val result = userRepository.getUser(userId)
 
                 result.onSuccess { user ->
+                    // Update local state with fresh data from Firestore
+                    _userName.value = user.name
+                    _userEmail.value = user.email
+
+                    // Use the profile image from Firestore, or empty string if null/not set
+                    _profileImageUrl.value = user.profileImageUrl ?: ""
+
                     // Update local preferences with Firestore data
                     preferences.setUserName(user.name)
                     preferences.setUserEmail(user.email)
                     user.profileImageUrl?.let {
                         preferences.setProfileImageUrl(it)
                         Log.d("SettingsViewModel", "Loaded profile image URL: $it")
+                    } ?: run {
+                        // Clear profile image if it's null in Firestore
+                        preferences.setProfileImageUrl("")
+                        Log.d("SettingsViewModel", "No profile image in Firestore, using default")
                     }
-                    Log.d("SettingsViewModel", "User data loaded successfully")
+
+                    Log.d("SettingsViewModel", "User data loaded successfully - Name: ${user.name}, Email: ${user.email}, Image: ${user.profileImageUrl ?: "default"}")
                     isLoading = false
                 }.onFailure { exception ->
                     errorMessage = "Failed to load user data: ${exception.message}"
@@ -287,7 +310,18 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
     fun updateProfileImageUrl(url: String) {
         viewModelScope.launch {
+            _profileImageUrl.value = url
             preferences.setProfileImageUrl(url)
         }
+    }
+
+    // Clear cached data when user logs out
+    fun clearUserData() {
+        _userName.value = ""
+        _userEmail.value = ""
+        _profileImageUrl.value = ""
+        editedName = ""
+        editedEmail = ""
+        selectedImageUri = null
     }
 }

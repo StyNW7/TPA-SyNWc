@@ -124,7 +124,7 @@ fun SettingsScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        authViewModel.logout()
+                        authViewModel.logout(settingsViewModel)
                         navController.navigate("login") {
                             popUpTo("settings") { inclusive = true }
                         }
@@ -364,10 +364,11 @@ fun ProfileImage(
                 contentScale = ContentScale.Crop
             )
         } else {
-            // Show placeholder when no image or error
+            // Show app logo as default when no image is set
+            // Replace with your actual app logo - you can use a vector asset or drawable
             Icon(
-                Icons.Default.Person,
-                contentDescription = "Profile picture",
+                Icons.Default.AccountCircle, // Replace with your app logo icon
+                contentDescription = "Default profile picture",
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -414,56 +415,6 @@ fun ImagePickerDialog(
         }
     )
 }
-
-//@Composable
-//fun DebugInfoCard(
-//    profileImageUrl: String,
-//    isLoading: Boolean,
-//    errorMessage: String?,
-//    imageUpdateTrigger: Int,
-//    onReload: () -> Unit
-//) {
-//    Card(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(vertical = 8.dp),
-//        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-//    ) {
-//        Column(
-//            modifier = Modifier.padding(16.dp)
-//        ) {
-//            Text(
-//                "Debug Information:",
-//                style = MaterialTheme.typography.bodyMedium,
-//                fontWeight = FontWeight.Bold,
-//                color = MaterialTheme.colorScheme.primary
-//            )
-//
-//            Spacer(modifier = Modifier.height(8.dp))
-//
-//            Text("Image URL: ${profileImageUrl.ifEmpty { "Empty" }}",
-//                style = MaterialTheme.typography.bodySmall)
-//            Text("URL Length: ${profileImageUrl.length}",
-//                style = MaterialTheme.typography.bodySmall)
-//            Text("Loading: $isLoading",
-//                style = MaterialTheme.typography.bodySmall)
-//            Text("Error: ${errorMessage ?: "None"}",
-//                style = MaterialTheme.typography.bodySmall)
-//            Text("Image Update Trigger: $imageUpdateTrigger",
-//                style = MaterialTheme.typography.bodySmall)
-//
-//            Spacer(modifier = Modifier.height(12.dp))
-//
-//            Button(
-//                onClick = onReload,
-//                modifier = Modifier.fillMaxWidth()
-//            ) {
-//                Text("Reload User Data")
-//            }
-//        }
-//    }
-//}
 
 // The rest of your composable functions remain the same (SettingsSection, ThemeSelector, ThemeOption, AboutSection, SyncSection, EditProfileDialog)
 @Composable

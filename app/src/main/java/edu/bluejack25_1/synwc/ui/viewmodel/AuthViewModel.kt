@@ -2,6 +2,8 @@ package edu.bluejack25_1.synwc.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import edu.bluejack25_1.synwc.data.repository.AuthRepository
 import edu.bluejack25_1.synwc.data.repository.StreakRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,10 +88,18 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun logout() {
-        repository.logout()
-        _userLoggedIn.value = false
-        _success.value = false
+    fun logout(settingsViewModel: SettingsViewModel? = null) {
+        viewModelScope.launch {
+            try {
+                Firebase.auth.signOut()
+                _userLoggedIn.value = false
+
+                // Clear settings data when logging out
+                settingsViewModel?.clearUserData()
+            } catch (e: Exception) {
+                _errorMessage.value = "Logout failed: ${e.message}"
+            }
+        }
     }
 
     fun checkAuthState() {

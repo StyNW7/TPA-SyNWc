@@ -1,5 +1,7 @@
 package edu.bluejack25_1.synwc.ui.screen.home
 
+import android.graphics.Color
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,7 +23,15 @@ import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,6 +116,7 @@ fun HomeScreen(
                         fontWeight = FontWeight.Bold
                     )
                 },
+
                 actions = {
                     IconButton(onClick = {
                         authViewModel.logout()
@@ -114,6 +125,7 @@ fun HomeScreen(
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 },
+
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -228,41 +240,140 @@ fun StreakSection(currentUser: edu.bluejack25_1.synwc.data.model.User?) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 "Your Streaks 🔥",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StreakItem(
+                BeautifulStreakItem(
                     title = "Login",
                     count = currentUser?.loginStreak ?: 0,
-                    icon = Icons.Default.Person
+                    icon = Icons.Rounded.Person,
+                    gradientColors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    description = "Daily login streak"
                 )
-                StreakItem(
+                BeautifulStreakItem(
                     title = "To-Do",
                     count = currentUser?.todoStreak ?: 0,
-                    icon = Icons.Default.Checklist
+                    icon = Icons.Rounded.CheckCircle,
+                    gradientColors = listOf(
+                        MaterialTheme.colorScheme.secondary,
+                        MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    description = "Tasks completed"
                 )
-                StreakItem(
+                BeautifulStreakItem(
                     title = "Reflection",
                     count = currentUser?.reflectionStreak ?: 0,
-                    icon = Icons.Default.Lightbulb
+                    icon = Icons.Rounded.Lightbulb,
+                    gradientColors = listOf(
+                        MaterialTheme.colorScheme.tertiary,
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    ),
+                    description = "Daily reflections"
                 )
             }
         }
+    }
+}
+
+@Composable
+fun BeautifulStreakItem(
+    title: String,
+    count: Int,
+    icon: ImageVector,
+    gradientColors: List<ComposeColor>,
+    description: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(100.dp)
+    ) {
+        // Gradient background with icon
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .shadow(
+                    elevation = 8.dp,
+                    shape = CircleShape,
+                    clip = false
+                )
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = gradientColors
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = title,
+                tint = ComposeColor.White,
+                modifier = Modifier.size(32.dp)
+            )
+
+            // Small flame indicator for active streaks
+            if (count > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(16.dp)
+                        .background(ComposeColor.Red, CircleShape)
+                        .padding(2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "🔥",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Streak count with nice styling
+        Text(
+            "$count",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Title
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Description
+        Text(
+            description,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
 }
 
