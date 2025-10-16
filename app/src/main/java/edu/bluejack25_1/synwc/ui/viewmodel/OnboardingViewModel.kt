@@ -16,7 +16,7 @@ class OnboardingViewModel : ViewModel() {
     private val pages = listOf(
         OnboardingPage(
             imageRes = R.drawable.ic_book_nobg,
-            title = "Simple & Minimalist To-do List",
+            title = "Simple & Minimalist To-do",
             description = "Write down all your tasks on your to-do list."
         ),
         OnboardingPage(
