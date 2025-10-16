@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import edu.bluejack25_1.synwc.ui.screen.admin.QuoteSeederScreen
 import edu.bluejack25_1.synwc.ui.screen.onboarding.OnboardingScreen
 import edu.bluejack25_1.synwc.ui.screen.auth.LoginScreen
 import edu.bluejack25_1.synwc.ui.screen.auth.RegisterScreen
@@ -58,5 +59,8 @@ fun AppNavGraph(
         composable("settings") {
             SettingsScreen(navController = navController)
         }
+//      composable("login") {
+//          QuoteSeederScreen(navController = navController)
+//      }
     }
 }

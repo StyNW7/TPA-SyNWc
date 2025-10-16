@@ -4,11 +4,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.Firebase
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class QuoteSeeder {
     private val db: FirebaseFirestore = Firebase.firestore
 
-    suspend fun seedQuotes() {
+    suspend fun seedQuotes(): Boolean {
         val quotes = listOf(
             mapOf(
                 "text" to "The only way to do great work is to love what you do.",
@@ -59,84 +60,79 @@ class QuoteSeeder {
                 "text" to "It is never too late to be what you might have been.",
                 "author" to "George Eliot",
                 "category" to "daily"
-            ),
-            mapOf(
-                "text" to "Do not go where the path may lead, go instead where there is no path and leave a trail.",
-                "author" to "Ralph Waldo Emerson",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "The best and most beautiful things in the world cannot be seen or even touched - they must be felt with the heart.",
-                "author" to "Helen Keller",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "Keep your face always toward the sunshine - and shadows will fall behind you.",
-                "author" to "Walt Whitman",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "You will face many defeats in life, but never let yourself be defeated.",
-                "author" to "Maya Angelou",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "The greatest glory in living lies not in never falling, but in rising every time we fall.",
-                "author" to "Nelson Mandela",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "In the end, it's not the years in your life that count. It's the life in your years.",
-                "author" to "Abraham Lincoln",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "Never let the fear of striking out keep you from playing the game.",
-                "author" to "Babe Ruth",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "Life is either a daring adventure or nothing at all.",
-                "author" to "Helen Keller",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "Many of life's failures are people who did not realize how close they were to success when they gave up.",
-                "author" to "Thomas A. Edison",
-                "category" to "daily"
-            ),
-            mapOf(
-                "text" to "You have brains in your head. You have feet in your shoes. You can steer yourself any direction you choose.",
-                "author" to "Dr. Seuss",
-                "category" to "daily"
             )
         )
 
         var successCount = 0
         var errorCount = 0
 
+        // First, let's check if we can read from Firestore
+        try {
+            println("🔍 Checking Firestore connection...")
+            val testDoc = db.collection("test").document("connection_test")
+            testDoc.set(mapOf("test" to true)).await()
+            testDoc.delete().await()
+            println("✅ Firestore connection successful")
+        } catch (e: Exception) {
+            println("❌ Firestore connection failed: ${e.message}")
+            return false
+        }
+
         quotes.forEachIndexed { index, quoteData ->
             try {
-                // Use auto-generated document ID
+                // Use specific document ID instead of auto-generated
+                val documentId = "quote_${index + 1}"
                 db.collection("quotes")
-                    .add(quoteData)
+                    .document(documentId)
+                    .set(quoteData)
                     .await()
                 successCount++
-                println("✅ Successfully added quote ${index + 1}: ${quoteData["text"]}")
+                println("✅ Successfully added quote $documentId: ${quoteData["text"]?.take(50)}...")
             } catch (e: Exception) {
                 errorCount++
                 println("❌ Error adding quote ${index + 1}: ${e.message}")
+                e.printStackTrace()
             }
         }
 
         println("\n🎉 Seeding completed!")
         println("✅ Successfully added: $successCount quotes")
         println("❌ Failed to add: $errorCount quotes")
-        println("📊 Total quotes in database: ${successCount}")
+
+        // Verify by reading back
+        if (successCount > 0) {
+            try {
+                println("\n🔍 Verifying quotes in database...")
+                val snapshot = db.collection("quotes").get().await()
+                println("📊 Found ${snapshot.documents.size} quotes in database")
+                snapshot.documents.forEach { doc ->
+                    println("   - ${doc.id}: ${doc.getString("text")?.take(30)}...")
+                }
+            } catch (e: Exception) {
+                println("❌ Error verifying quotes: ${e.message}")
+            }
+        }
+
+        return successCount > 0
     }
 
-    suspend fun clearQuotes() {
-        try {
+    suspend fun checkExistingQuotes(): Int {
+        return try {
+            val snapshot = db.collection("quotes").get().await()
+            val count = snapshot.documents.size
+            println("📊 Found $count existing quotes in database")
+            snapshot.documents.forEach { doc ->
+                println("   - ${doc.id}: ${doc.getString("text")?.take(30)}...")
+            }
+            count
+        } catch (e: Exception) {
+            println("❌ Error checking existing quotes: ${e.message}")
+            -1
+        }
+    }
+
+    suspend fun clearQuotes(): Boolean {
+        return try {
             val snapshot = db.collection("quotes").get().await()
             val batch = db.batch()
 
@@ -146,8 +142,10 @@ class QuoteSeeder {
 
             batch.commit().await()
             println("🗑️ All quotes cleared from database")
+            true
         } catch (e: Exception) {
             println("❌ Error clearing quotes: ${e.message}")
+            false
         }
     }
 }

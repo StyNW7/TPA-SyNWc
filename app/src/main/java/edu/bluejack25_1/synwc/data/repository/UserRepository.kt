@@ -93,6 +93,31 @@ class UserRepository {
         }
     }
 
+    suspend fun updateUserProfile(userId: String, name: String, email: String): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "name" to name,
+                "email" to email
+            )
+            db.document(userId).update(updates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateProfileImage(userId: String, imageUrl: String): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "profileImageUrl" to imageUrl
+            )
+            db.document(userId).update(updates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun getCurrentUserId(): String {
         return auth.currentUser?.uid ?: throw Exception("User not authenticated")
     }
