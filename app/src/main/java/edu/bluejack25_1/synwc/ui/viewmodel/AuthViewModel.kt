@@ -3,12 +3,14 @@ package edu.bluejack25_1.synwc.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.bluejack25_1.synwc.data.repository.AuthRepository
+import edu.bluejack25_1.synwc.data.repository.StreakRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AuthViewModel : ViewModel() {
     private val repository = AuthRepository()
+    private val streakRepository = StreakRepository()
 
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
@@ -75,6 +77,12 @@ class AuthViewModel : ViewModel() {
             }.onFailure {
                 _errorMessage.value = getFirebaseAuthErrorMessage(it)
             }
+        }
+    }
+
+    fun updateLoginStreak() {
+        viewModelScope.launch {
+            streakRepository.updateLoginStreak()
         }
     }
 

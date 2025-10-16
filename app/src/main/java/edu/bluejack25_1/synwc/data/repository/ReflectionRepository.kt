@@ -195,7 +195,7 @@ class ReflectionRepository {
                 .set(reflection.toMap())
                 .await()
 
-            // Update reflection streak
+            // Update reflection streak - use the new function
             streakRepository.updateReflectionStreak()
 
             Result.success(reflectionId)

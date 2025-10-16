@@ -50,27 +50,8 @@ class UserViewModel : ViewModel() {
         }
     }
 
-    fun updateStreak(newStreak: Int) {
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                val userId = userRepository.getCurrentUserId()
-                val result = userRepository.updateStreak(userId, newStreak)
-                result.onSuccess {
-                    // Reload user data after update
-                    loadCurrentUser()
-                }.onFailure {
-                    _errorMessage.value = "Failed to update streak: ${it.message}"
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "User not authenticated"
-            } finally {
-                _loading.value = false
-            }
-        }
-    }
-
     fun clearError() {
         _errorMessage.value = null
     }
+
 }

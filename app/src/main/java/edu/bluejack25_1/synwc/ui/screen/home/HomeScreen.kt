@@ -21,9 +21,7 @@ import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,15 +57,6 @@ fun HomeScreen(
         }
     }
 
-    // Load user data when screen appears
-    LaunchedEffect(Unit) {
-        authViewModel.checkAuthState()
-        if (userLoggedIn) {
-            userViewModel.loadCurrentUser()
-            homeViewModel.refreshAllData()
-        }
-    }
-
     // Show messages as Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -81,6 +70,18 @@ fun HomeScreen(
     LaunchedEffect(successMessage) {
         successMessage?.let { success ->
             snackbarHostState.showSnackbar(success)
+        }
+    }
+
+    // Load user data when screen appears and check streaks
+    LaunchedEffect(Unit) {
+        authViewModel.checkAuthState()
+        if (userLoggedIn) {
+            userViewModel.loadCurrentUser()
+            homeViewModel.refreshAllData()
+
+            // Update login streak when user opens the app
+            authViewModel.updateLoginStreak()
         }
     }
 
@@ -858,6 +859,6 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
 
 // Add this helper function to the HomeScreen.kt file:
 private fun getFormattedDate(): String {
-    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    return sdf.format(Date())
+    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+    return sdf.format(java.util.Date())
 }

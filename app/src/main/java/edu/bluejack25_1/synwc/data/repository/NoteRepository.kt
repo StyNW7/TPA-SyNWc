@@ -2,12 +2,20 @@ package edu.bluejack25_1.synwc.data.repository
 
 import edu.bluejack25_1.synwc.data.model.Note
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.auth
+import com.google.firebase.Firebase
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class NoteRepository {
     private val db = FirebaseFirestore.getInstance()
     private val notesCollection = db.collection("notes")
+    private val auth = Firebase.auth
+    private val streakRepository = StreakRepository()
+
+    private fun getCurrentUserId(): String {
+        return auth.currentUser?.uid ?: throw Exception("User not authenticated")
+    }
 
     suspend fun getNotes(userId: String): Result<List<Note>> {
         return try {
@@ -75,6 +83,13 @@ class NoteRepository {
             println("DEBUG: Updating note ${note.id} in Firestore")
             notesCollection.document(note.id).set(noteData).await()
             println("DEBUG: Successfully updated note ${note.id}")
+
+            // Update todo streak if note is being marked as completed
+            if (note.isCompleted) {
+                val userId = getCurrentUserId()
+                streakRepository.updateTodoStreak(userId)
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             println("DEBUG: Error updating note: ${e.message}")
@@ -107,9 +122,26 @@ class NoteRepository {
             println("DEBUG: Toggling note $noteId status to $isCompleted")
             notesCollection.document(noteId).update("isCompleted", isCompleted).await()
             println("DEBUG: Successfully toggled note $noteId status")
+
+            // Update todo streak if note is being marked as completed
+            if (isCompleted) {
+                val userId = getCurrentUserId()
+                streakRepository.updateTodoStreak(userId)
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             println("DEBUG: Error toggling note status: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    // Helper function to get notes for current user
+    suspend fun getNotesForCurrentUser(): Result<List<Note>> {
+        return try {
+            val userId = getCurrentUserId()
+            getNotes(userId)
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }

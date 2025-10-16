@@ -18,9 +18,19 @@ class UserRepository {
 
     suspend fun createUser(user: User): Result<Unit> {
         return try {
+            // Initialize with proper streak data
+            val newUser = user.copy(
+                loginStreak = 1,
+                todoStreak = 0,
+                reflectionStreak = 0,
+                lastLoginDate = User.getCurrentDate(),
+                lastTodoDate = "", // Empty means no todo activity yet
+                lastReflectionDate = "" // Empty means no reflection activity yet
+            )
+
             db.collection(USERS_COLLECTION)
-                .document(user.id)
-                .set(user.toMap())
+                .document(newUser.id)
+                .set(newUser.toMap())
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -82,22 +92,6 @@ class UserRepository {
         return try {
             val updates = mapOf(
                 "profileImageUrl" to imageUrl
-            )
-            db.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(updates)
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun updateStreak(userId: String, newStreak: Int): Result<Unit> {
-        return try {
-            val updates = mapOf(
-                "loginStreak" to newStreak,
-                "lastLoginDate" to User.getCurrentDate()
             )
             db.collection(USERS_COLLECTION)
                 .document(userId)

@@ -11,10 +11,15 @@ import java.lang.Exception
 class AuthRepository {
     private val auth: FirebaseAuth = Firebase.auth
     private val userRepository = UserRepository()
+    private val streakRepository = StreakRepository()
 
     suspend fun loginUser(email: String, password: String): Result<Unit> {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
+
+            // Update login streak after successful login
+            streakRepository.updateLoginStreak()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -32,19 +37,26 @@ class AuthRepository {
                     .build()
                 user.updateProfile(profileUpdates).await()
 
-                // Create user in Firestore with new streak fields
-                val newUser = User(
+                // Create user in Firestore with proper streak initialization
+
+                val newUser = User.createNewUser(
                     id = user.uid,
                     name = username,
-                    email = email,
-                    joinDate = System.currentTimeMillis(),
-                    loginStreak = 1, // Start with 1 for the first day
-                    todoStreak = 0,
-                    reflectionStreak = 0,
-                    lastLoginDate = User.getCurrentDate(),
-                    lastTodoDate = User.getCurrentDate(),
-                    lastReflectionDate = User.getCurrentDate()
+                    email = email
                 )
+
+//                val newUser = User(
+//                    id = user.uid,
+//                    name = username,
+//                    email = email,
+//                    joinDate = System.currentTimeMillis(),
+//                    loginStreak = 1, // Start with 1 for registration day
+//                    todoStreak = 0,
+//                    reflectionStreak = 0,
+//                    lastLoginDate = User.getCurrentDate(),
+//                    lastTodoDate = "", // Empty until first todo completion
+//                    lastReflectionDate = "" // Empty until first reflection
+//                )
 
                 val createUserResult = userRepository.createUser(newUser)
                 if (createUserResult.isFailure) {
