@@ -1,6 +1,7 @@
 package edu.bluejack25_1.synwc.ui.theme
 
 import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -8,6 +9,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -27,11 +29,16 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun SyNWcTheme(
-//    darkTheme: Boolean = isSystemInDarkTheme(), // auto follows system setting
-    darkTheme: Boolean = true, // default light theme
-    dynamicColor: Boolean = false,
+    themeMode: String = rememberThemeMode().value,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        "system" -> isSystemInDarkTheme()
+        else -> isSystemInDarkTheme()
+    }
+
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val view = LocalView.current

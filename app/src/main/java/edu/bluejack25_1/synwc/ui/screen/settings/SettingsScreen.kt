@@ -46,7 +46,9 @@ fun SettingsScreen(
         factory = SettingsViewModelFactory(context)
     )
 
-    val themeMode by settingsViewModel.themeMode.collectAsState(initial = "system")
+    val themeMode by settingsViewModel.themeMode.collectAsState()
+//    val themeMode by settingsViewModel.themeMode.collectAsState(initial = "system")
+
     val userName by settingsViewModel.userName.collectAsState(initial = "")
     val userEmail by settingsViewModel.userEmail.collectAsState(initial = "")
     val profileImageUrl by settingsViewModel.profileImageUrl.collectAsState(initial = "")
@@ -179,33 +181,33 @@ fun SettingsScreen(
                 }
 
                 // Sync Section
-                item {
-                    SettingsSection(title = "Data") {
-                        SyncSection(
-                            onSyncData = {
-                                settingsViewModel.loadUserData()
-                                imageUpdateTrigger++ // Force image refresh
-                            },
-                            isLoading = isLoading
-                        )
-                    }
-                }
+//                item {
+//                    SettingsSection(title = "Data") {
+//                        SyncSection(
+//                            onSyncData = {
+//                                settingsViewModel.loadUserData()
+//                                imageUpdateTrigger++
+//                            },
+//                            isLoading = isLoading
+//                        )
+//                    }
+//                }
 
-                // Debug Section (remove in production)
-                item {
-                    SettingsSection(title = "Debug Info") {
-                        DebugInfoCard(
-                            profileImageUrl = profileImageUrl,
-                            isLoading = isLoading,
-                            errorMessage = errorMessage,
-                            imageUpdateTrigger = imageUpdateTrigger,
-                            onReload = {
-                                settingsViewModel.loadUserData()
-                                imageUpdateTrigger++
-                            }
-                        )
-                    }
-                }
+                // Debug Section
+//                item {
+//                    SettingsSection(title = "Debug Info") {
+//                        DebugInfoCard(
+//                            profileImageUrl = profileImageUrl,
+//                            isLoading = isLoading,
+//                            errorMessage = errorMessage,
+//                            imageUpdateTrigger = imageUpdateTrigger,
+//                            onReload = {
+//                                settingsViewModel.loadUserData()
+//                                imageUpdateTrigger++
+//                            }
+//                        )
+//                    }
+//                }
             }
 
             // Loading indicator
@@ -322,6 +324,8 @@ fun ProfileImage(
     isLoading: Boolean,
     onChangePhoto: () -> Unit
 ) {
+    var imageLoadError by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .size(80.dp)
@@ -339,16 +343,18 @@ fun ProfileImage(
                 modifier = Modifier.size(30.dp),
                 strokeWidth = 2.dp
             )
-        } else if (profileImageUrl.isNotEmpty()) {
+        } else if (profileImageUrl.isNotEmpty() && !imageLoadError) {
             // Show profile image with proper caching
             Image(
                 painter = rememberAsyncImagePainter(
                     model = profileImageUrl,
                     onSuccess = {
                         println("Profile image loaded successfully: $profileImageUrl")
+                        imageLoadError = false
                     },
                     onError = {
                         println("Failed to load profile image: $profileImageUrl")
+                        imageLoadError = true
                     }
                 ),
                 contentDescription = "Profile picture",
@@ -358,7 +364,7 @@ fun ProfileImage(
                 contentScale = ContentScale.Crop
             )
         } else {
-            // Show placeholder when no image
+            // Show placeholder when no image or error
             Icon(
                 Icons.Default.Person,
                 contentDescription = "Profile picture",
@@ -409,55 +415,55 @@ fun ImagePickerDialog(
     )
 }
 
-@Composable
-fun DebugInfoCard(
-    profileImageUrl: String,
-    isLoading: Boolean,
-    errorMessage: String?,
-    imageUpdateTrigger: Int,
-    onReload: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                "Debug Information:",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text("Image URL: ${profileImageUrl.ifEmpty { "Empty" }}",
-                style = MaterialTheme.typography.bodySmall)
-            Text("URL Length: ${profileImageUrl.length}",
-                style = MaterialTheme.typography.bodySmall)
-            Text("Loading: $isLoading",
-                style = MaterialTheme.typography.bodySmall)
-            Text("Error: ${errorMessage ?: "None"}",
-                style = MaterialTheme.typography.bodySmall)
-            Text("Image Update Trigger: $imageUpdateTrigger",
-                style = MaterialTheme.typography.bodySmall)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onReload,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Reload User Data")
-            }
-        }
-    }
-}
+//@Composable
+//fun DebugInfoCard(
+//    profileImageUrl: String,
+//    isLoading: Boolean,
+//    errorMessage: String?,
+//    imageUpdateTrigger: Int,
+//    onReload: () -> Unit
+//) {
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(vertical = 8.dp),
+//        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+//    ) {
+//        Column(
+//            modifier = Modifier.padding(16.dp)
+//        ) {
+//            Text(
+//                "Debug Information:",
+//                style = MaterialTheme.typography.bodyMedium,
+//                fontWeight = FontWeight.Bold,
+//                color = MaterialTheme.colorScheme.primary
+//            )
+//
+//            Spacer(modifier = Modifier.height(8.dp))
+//
+//            Text("Image URL: ${profileImageUrl.ifEmpty { "Empty" }}",
+//                style = MaterialTheme.typography.bodySmall)
+//            Text("URL Length: ${profileImageUrl.length}",
+//                style = MaterialTheme.typography.bodySmall)
+//            Text("Loading: $isLoading",
+//                style = MaterialTheme.typography.bodySmall)
+//            Text("Error: ${errorMessage ?: "None"}",
+//                style = MaterialTheme.typography.bodySmall)
+//            Text("Image Update Trigger: $imageUpdateTrigger",
+//                style = MaterialTheme.typography.bodySmall)
+//
+//            Spacer(modifier = Modifier.height(12.dp))
+//
+//            Button(
+//                onClick = onReload,
+//                modifier = Modifier.fillMaxWidth()
+//            ) {
+//                Text("Reload User Data")
+//            }
+//        }
+//    }
+//}
 
 // The rest of your composable functions remain the same (SettingsSection, ThemeSelector, ThemeOption, AboutSection, SyncSection, EditProfileDialog)
 @Composable

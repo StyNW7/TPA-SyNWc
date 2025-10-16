@@ -11,6 +11,9 @@ import androidx.lifecycle.viewModelScope
 import edu.bluejack25_1.synwc.data.preferences.AppPreferences
 import edu.bluejack25_1.synwc.data.repository.UserRepository
 import edu.bluejack25_1.synwc.util.CloudinaryManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,9 +23,19 @@ class SettingsViewModel(context: Context) : ViewModel() {
     private val userRepository = UserRepository()
     private val cloudinaryManager = CloudinaryManager(context)
 
-    // Theme state
-    val themeMode = preferences.themeMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
+    // Theme state - use StateFlow for immediate updates
+    private val _themeMode = MutableStateFlow("system")
+    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+
+    init {
+        // Load initial theme mode and observe changes
+        viewModelScope.launch {
+            preferences.themeMode.collect { mode ->
+                _themeMode.value = mode
+                Log.d("SettingsViewModel", "Theme mode updated to: $mode")
+            }
+        }
+    }
 
     // User profile state
     val userName = preferences.userName
@@ -56,13 +69,16 @@ class SettingsViewModel(context: Context) : ViewModel() {
     var selectedImageUri by mutableStateOf<Uri?>(null)
         private set
 
-    // Actions
+    // Theme actions
     fun setThemeMode(theme: String) {
         viewModelScope.launch {
+            Log.d("SettingsViewModel", "Setting theme mode to: $theme")
             preferences.setThemeMode(theme)
+            // The theme will update automatically throughout the app via the observer
         }
     }
 
+    // ... rest of your existing methods (showEditProfile, saveProfile, uploadProfileImage, etc.)
     fun showEditProfile() {
         editedName = userName.value
         editedEmail = userEmail.value
@@ -152,15 +168,19 @@ class SettingsViewModel(context: Context) : ViewModel() {
                     uploadResult.onSuccess { imageUrl ->
                         Log.d("SettingsViewModel", "Image uploaded to Cloudinary: $imageUrl")
 
+                        // Ensure HTTPS URL
+                        val secureImageUrl = ensureHttpsUrl(imageUrl)
+                        Log.d("SettingsViewModel", "Using secure URL: $secureImageUrl")
+
                         // Update Firestore with new image URL
                         val userId = userRepository.getCurrentUserId()
                         Log.d("SettingsViewModel", "Updating profile image for user: $userId")
 
-                        val updateResult = userRepository.updateProfileImage(userId, imageUrl)
+                        val updateResult = userRepository.updateProfileImage(userId, secureImageUrl)
 
                         updateResult.onSuccess {
                             // Save to local preferences
-                            preferences.setProfileImageUrl(imageUrl)
+                            preferences.setProfileImageUrl(secureImageUrl)
 
                             Log.d("SettingsViewModel", "Profile image updated successfully")
                             showImagePicker = false
@@ -195,11 +215,14 @@ class SettingsViewModel(context: Context) : ViewModel() {
             uploadResult.onSuccess { imageUrl ->
                 Log.d("SettingsViewModel", "Image uploaded to Cloudinary (file method): $imageUrl")
 
+                // Ensure HTTPS URL
+                val secureImageUrl = ensureHttpsUrl(imageUrl)
+
                 val userId = userRepository.getCurrentUserId()
-                val updateResult = userRepository.updateProfileImage(userId, imageUrl)
+                val updateResult = userRepository.updateProfileImage(userId, secureImageUrl)
 
                 updateResult.onSuccess {
-                    preferences.setProfileImageUrl(imageUrl)
+                    preferences.setProfileImageUrl(secureImageUrl)
                     showImagePicker = false
                     selectedImageUri = null
                     isLoading = false
@@ -215,6 +238,14 @@ class SettingsViewModel(context: Context) : ViewModel() {
         } catch (e: Exception) {
             errorMessage = "Both upload methods failed: ${e.message}"
             isLoading = false
+        }
+    }
+
+    private fun ensureHttpsUrl(url: String): String {
+        return if (url.startsWith("http://")) {
+            url.replace("http://", "https://")
+        } else {
+            url
         }
     }
 
@@ -252,5 +283,11 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
     fun clearError() {
         errorMessage = null
+    }
+
+    fun updateProfileImageUrl(url: String) {
+        viewModelScope.launch {
+            preferences.setProfileImageUrl(url)
+        }
     }
 }
