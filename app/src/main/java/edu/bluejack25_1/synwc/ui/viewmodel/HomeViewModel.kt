@@ -49,6 +49,9 @@ class HomeViewModel : ViewModel() {
     var hasReflectedToday by mutableStateOf(false)
         private set
 
+    var questionHistory by mutableStateOf<List<Pair<String, String>>>(emptyList())
+        private set
+
     // Common States
     var isLoading by mutableStateOf(false)
         private set
@@ -58,6 +61,8 @@ class HomeViewModel : ViewModel() {
 
     var successMessage by mutableStateOf<String?>(null)
         private set
+
+    private var lastQuestionDate by mutableStateOf("")
 
     init {
         loadInitialData()
@@ -71,7 +76,7 @@ class HomeViewModel : ViewModel() {
                 // Load quotes and reflection data in parallel
                 val quoteJob = launch { loadDailyQuote() }
                 val reflectionJob = launch {
-                    loadDailyReflectionQuestion()
+                    checkAndUpdateDailyQuestion()
                     checkIfReflectedToday()
                     loadReflectionHistory()
                 }
@@ -87,6 +92,19 @@ class HomeViewModel : ViewModel() {
             } finally {
                 isLoading = false
             }
+        }
+    }
+
+    private suspend fun checkAndUpdateDailyQuestion() {
+        val currentDate = getCurrentDate()
+
+        // Check if we need to update the question (new day)
+        if (lastQuestionDate != currentDate) {
+            loadDailyReflectionQuestion()
+            lastQuestionDate = currentDate
+        } else if (dailyQuestion.isEmpty()) {
+            // If no question loaded yet, load it
+            loadDailyReflectionQuestion()
         }
     }
 
@@ -202,18 +220,33 @@ class HomeViewModel : ViewModel() {
                 result.onSuccess { question ->
                     dailyQuestion = question
                     reflectionAnswer = "" // Clear previous answer
+                    lastQuestionDate = getCurrentDate()
                 }.onFailure { exception ->
                     errorMessage = "Failed to load reflection question: ${exception.message}"
-                    // Set a default question if loading fails
-                    dailyQuestion = "What are you grateful for today?"
+                    // Set a fallback question if loading fails
+                    dailyQuestion = getFallbackQuestion()
                 }
             } catch (e: Exception) {
                 errorMessage = "Exception loading reflection question: ${e.message}"
-                dailyQuestion = "What made you smile today?"
+                dailyQuestion = getFallbackQuestion()
             } finally {
                 isLoading = false
             }
         }
+    }
+
+    private fun getFallbackQuestion(): String {
+        // Use date-based fallback to ensure consistency
+        val calendar = Calendar.getInstance()
+        val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
+        val questions = listOf(
+            "What are you grateful for today?",
+            "What was the highlight of your day?",
+            "What challenged you today and how did you overcome it?",
+            "What did you learn today?",
+            "How did you show kindness today?"
+        )
+        return questions[dayOfYear % questions.size]
     }
 
     fun saveReflection() {
@@ -267,6 +300,25 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    fun loadQuestionHistory() {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                val result = reflectionRepository.getQuestionHistory()
+                result.onSuccess { questions ->
+                    questionHistory = questions
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load question history: ${exception.message}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception loading question history: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
     private suspend fun checkIfReflectedToday() {
         try {
             val result = reflectionRepository.hasReflectedToday()
@@ -306,5 +358,10 @@ class HomeViewModel : ViewModel() {
 
     fun refreshAllData() {
         loadInitialData()
+    }
+
+    private fun getCurrentDate(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return sdf.format(Date())
     }
 }

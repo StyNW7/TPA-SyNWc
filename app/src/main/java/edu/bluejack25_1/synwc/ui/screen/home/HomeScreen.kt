@@ -21,6 +21,9 @@ import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -704,6 +707,15 @@ fun CurrentReflectionSection(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
+                // Display today's date
+                Text(
+                    "Today's Reflection - ${getFormattedDate()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
                     "Today's Question:",
                     style = MaterialTheme.typography.titleSmall,
@@ -714,7 +726,7 @@ fun CurrentReflectionSection(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    dailyQuestion.ifEmpty { "Loading question..." },
+                    dailyQuestion.ifEmpty { "Loading today's question..." },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -736,7 +748,7 @@ fun CurrentReflectionSection(
             enabled = !isLoading && !hasReflectedToday,
             placeholder = {
                 if (hasReflectedToday) {
-                    Text("You've already reflected today. Come back tomorrow!")
+                    Text("You've already reflected today. Come back tomorrow for a new question!")
                 } else {
                     Text("Write your thoughts here...")
                 }
@@ -761,7 +773,11 @@ fun CurrentReflectionSection(
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { homeViewModel.loadDailyReflectionQuestion() },
+            onClick = {
+                if (!hasReflectedToday) {
+                    homeViewModel.loadDailyReflectionQuestion()
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary
@@ -838,4 +854,10 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
             )
         }
     }
+}
+
+// Add this helper function to the HomeScreen.kt file:
+private fun getFormattedDate(): String {
+    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return sdf.format(Date())
 }
