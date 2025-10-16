@@ -1,7 +1,6 @@
 package edu.bluejack25_1.synwc.ui.viewmodel
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -33,17 +32,16 @@ class SettingsViewModel(context: Context) : ViewModel() {
     var showEditProfileDialog by mutableStateOf(false)
         private set
 
-    var showImagePicker by mutableStateOf(false)
+    var isLoading by mutableStateOf(false)
+        private set
+
+    var errorMessage by mutableStateOf<String?>(null)
         private set
 
     var editedName by mutableStateOf("")
         private set
 
     var editedEmail by mutableStateOf("")
-        private set
-
-    // Simple approach - just use one mutable state without backing property
-    var selectedImageUri by mutableStateOf<Uri?>(null)
         private set
 
     // Actions
@@ -57,10 +55,12 @@ class SettingsViewModel(context: Context) : ViewModel() {
         editedName = userName.value
         editedEmail = userEmail.value
         showEditProfileDialog = true
+        errorMessage = null
     }
 
     fun hideEditProfile() {
         showEditProfileDialog = false
+        errorMessage = null
     }
 
     fun updateEditedName(name: String) {
@@ -72,35 +72,47 @@ class SettingsViewModel(context: Context) : ViewModel() {
     }
 
     fun saveProfile() {
-        viewModelScope.launch {
-            preferences.setUserName(editedName)
-            preferences.setUserEmail(editedEmail)
-            showEditProfileDialog = false
+        if (editedName.isEmpty() || editedEmail.isEmpty()) {
+            errorMessage = "Name and email cannot be empty"
+            return
         }
-    }
 
-    fun showImagePicker() {
-        showImagePicker = true
-    }
+        isLoading = true
+        errorMessage = null
 
-    fun hideImagePicker() {
-        showImagePicker = false
-    }
-
-    // Function to update the selected image URI - using different name to avoid conflict
-    fun updateImageUri(uri: Uri?) {
-        selectedImageUri = uri
-    }
-
-    fun uploadProfileImage() {
         viewModelScope.launch {
-            // Here you would upload to Cloudinary
-            // For now, we'll just save the local URI
-            selectedImageUri?.let { uri ->
-                preferences.setProfileImageUrl(uri.toString())
+            try {
+                // Save to local preferences
+                preferences.setUserName(editedName)
+                preferences.setUserEmail(editedEmail)
+
+                // Simulate API call delay
+                kotlinx.coroutines.delay(1000)
+
+                showEditProfileDialog = false
+                isLoading = false
+            } catch (e: Exception) {
+                errorMessage = "Error updating profile: ${e.message}"
+                isLoading = false
             }
-            showImagePicker = false
-            selectedImageUri = null
         }
+    }
+
+    fun loadUserData() {
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                // Simulate loading data
+                kotlinx.coroutines.delay(1000)
+                isLoading = false
+            } catch (e: Exception) {
+                errorMessage = "Error loading data: ${e.message}"
+                isLoading = false
+            }
+        }
+    }
+
+    fun clearError() {
+        errorMessage = null
     }
 }

@@ -19,66 +19,42 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import edu.bluejack25_1.synwc.R
 import edu.bluejack25_1.synwc.ui.viewmodel.SettingsViewModel
-import edu.bluejack25_1.synwc.util.ImagePicker
+import edu.bluejack25_1.synwc.ui.viewmodel.SettingsViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    context: Context = LocalContext.current,
-    settingsViewModel: SettingsViewModel = viewModel()
+    context: Context = LocalContext.current
 ) {
+    // Use the factory pattern for ViewModel initialization
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(context)
+    )
+
     val themeMode by settingsViewModel.themeMode.collectAsState(initial = "system")
     val userName by settingsViewModel.userName.collectAsState(initial = "")
     val userEmail by settingsViewModel.userEmail.collectAsState(initial = "")
     val profileImageUrl by settingsViewModel.profileImageUrl.collectAsState(initial = "")
 
-    val imagePicker = ImagePicker()
-    val pickImage = imagePicker.rememberImagePicker { uri ->
-        // CHANGED: Use the new function name
-        settingsViewModel.updateImageUri(uri)
-        if (uri != null) {
-            settingsViewModel.uploadProfileImage()
+    // Access mutable state directly
+    val isLoading = settingsViewModel.isLoading
+    val errorMessage = settingsViewModel.errorMessage
+
+    // Load user data when screen is first displayed
+    LaunchedEffect(Unit) {
+        settingsViewModel.loadUserData()
+    }
+
+    // Handle error messages
+    if (!errorMessage.isNullOrEmpty()) {
+        LaunchedEffect(errorMessage) {
+            // Show snackbar or handle error
         }
-    }
-
-    // Handle image picker dialog
-    if (settingsViewModel.showImagePicker) {
-        AlertDialog(
-            onDismissRequest = { settingsViewModel.hideImagePicker() },
-            title = { Text("Change Profile Picture") },
-            text = { Text("Choose how you want to set your profile picture") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        pickImage()
-                        settingsViewModel.hideImagePicker()
-                    }
-                ) {
-                    Text("Choose from Gallery")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { settingsViewModel.hideImagePicker() }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Edit profile dialog
-    if (settingsViewModel.showEditProfileDialog) {
-        EditProfileDialog(
-            settingsViewModel = settingsViewModel,
-            currentName = userName,
-            currentEmail = userEmail
-        )
     }
 
     Scaffold(
@@ -94,40 +70,78 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            // Profile Section
-            item {
-                SettingsSection(title = "Profile") {
-                    ProfileCard(
-                        userName = userName,
-                        userEmail = userEmail,
-                        profileImageUrl = profileImageUrl,
-                        onEditProfile = { settingsViewModel.showEditProfile() },
-                        onChangePhoto = { settingsViewModel.showImagePicker() }
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                // Profile Section
+                item {
+                    SettingsSection(title = "Profile") {
+                        ProfileCard(
+                            userName = userName,
+                            userEmail = userEmail,
+                            profileImageUrl = profileImageUrl,
+                            onEditProfile = { settingsViewModel.showEditProfile() },
+                            onChangePhoto = {
+                                // For now, just show edit profile since image picker might be causing issues
+                                settingsViewModel.showEditProfile()
+                            }
+                        )
+                    }
+                }
+
+                // Appearance Section
+                item {
+                    SettingsSection(title = "Appearance") {
+                        ThemeSelector(
+                            currentTheme = themeMode,
+                            onThemeSelected = { theme -> settingsViewModel.setThemeMode(theme) }
+                        )
+                    }
+                }
+
+                // About Section
+                item {
+                    SettingsSection(title = "About") {
+                        AboutSection()
+                    }
+                }
+
+                // Sync Section
+                item {
+                    SettingsSection(title = "Data") {
+                        SyncSection(
+                            onSyncData = { settingsViewModel.loadUserData() },
+                            isLoading = isLoading
+                        )
+                    }
                 }
             }
 
-            // Appearance Section
-            item {
-                SettingsSection(title = "Appearance") {
-                    ThemeSelector(
-                        currentTheme = themeMode,
-                        onThemeSelected = { theme -> settingsViewModel.setThemeMode(theme) }
-                    )
+            // Loading indicator
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
 
-            // About Section
-            item {
-                SettingsSection(title = "About") {
-                    AboutSection()
-                }
+            // Edit profile dialog
+            if (settingsViewModel.showEditProfileDialog) {
+                EditProfileDialog(
+                    settingsViewModel = settingsViewModel,
+                    currentName = userName,
+                    currentEmail = userEmail,
+                    isLoading = isLoading,
+                    errorMessage = errorMessage
+                )
             }
         }
     }
@@ -439,16 +453,79 @@ fun AboutSection() {
 }
 
 @Composable
+fun SyncSection(
+    onSyncData: () -> Unit,
+    isLoading: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            ListItem(
+                headlineContent = {
+                    Text(
+                        "Data Sync",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                },
+                supportingContent = {
+                    Text("Sync your data with the cloud")
+                },
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Sync,
+                        contentDescription = "Sync",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    Button(
+                        onClick = onSyncData,
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text("Sync Now")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
 fun EditProfileDialog(
     settingsViewModel: SettingsViewModel,
     currentName: String,
-    currentEmail: String
+    currentEmail: String,
+    isLoading: Boolean,
+    errorMessage: String?
 ) {
     AlertDialog(
-        onDismissRequest = { settingsViewModel.hideEditProfile() },
+        onDismissRequest = { if (!isLoading) settingsViewModel.hideEditProfile() },
         title = { Text("Edit Profile") },
         text = {
             Column {
+                if (!errorMessage.isNullOrEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+
                 OutlinedTextField(
                     value = settingsViewModel.editedName,
                     onValueChange = { settingsViewModel.updateEditedName(it) },
@@ -456,7 +533,8 @@ fun EditProfileDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    singleLine = true
+                    singleLine = true,
+                    enabled = !isLoading
                 )
 
                 OutlinedTextField(
@@ -464,20 +542,45 @@ fun EditProfileDialog(
                     onValueChange = { settingsViewModel.updateEditedEmail(it) },
                     label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    enabled = !isLoading
                 )
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = { settingsViewModel.saveProfile() },
-                enabled = settingsViewModel.editedName.isNotEmpty() && settingsViewModel.editedEmail.isNotEmpty()
+                enabled = settingsViewModel.editedName.isNotEmpty() &&
+                        settingsViewModel.editedEmail.isNotEmpty() &&
+                        !isLoading
             ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text("Save")
             }
         },
         dismissButton = {
-            TextButton(onClick = { settingsViewModel.hideEditProfile() }) {
+            TextButton(
+                onClick = { settingsViewModel.hideEditProfile() },
+                enabled = !isLoading
+            ) {
                 Text("Cancel")
             }
         }

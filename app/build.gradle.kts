@@ -62,6 +62,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("com.cloudinary:cloudinary-android:2.4.0")
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation ("androidx.compose.runtime:runtime-livedata:1.5.4")
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.database)
