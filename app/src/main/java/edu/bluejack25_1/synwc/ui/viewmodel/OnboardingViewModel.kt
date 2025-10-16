@@ -1,6 +1,7 @@
-package edu.bluejack25_1.synwc.ui.screen.onboarding
+package edu.bluejack25_1.synwc.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import edu.bluejack25_1.synwc.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -14,17 +15,17 @@ class OnboardingViewModel : ViewModel() {
 
     private val pages = listOf(
         OnboardingPage(
-            imageRes = edu.bluejack25_1.synwc.R.drawable.ic_book,
+            imageRes = R.drawable.ic_book,
             title = "Simple & Minimalist To-do List",
             description = "Write down all your tasks on your to-do list."
         ),
         OnboardingPage(
-            imageRes = edu.bluejack25_1.synwc.R.drawable.ic_message,
+            imageRes = R.drawable.ic_message,
             title = "Daily Quotes for Inspiration",
             description = "Get fresh motivational quotes every day."
         ),
         OnboardingPage(
-            imageRes = edu.bluejack25_1.synwc.R.drawable.ic_quote,
+            imageRes = R.drawable.ic_quote,
             title = "Reflect & Grow",
             description = "Write reflections and track your daily progress."
         )

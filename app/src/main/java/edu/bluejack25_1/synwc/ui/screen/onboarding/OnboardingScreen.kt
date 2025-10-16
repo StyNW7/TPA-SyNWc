@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph
 import com.google.accompanist.pager.*
 import edu.bluejack25_1.synwc.R
+import edu.bluejack25_1.synwc.ui.viewmodel.OnboardingViewModel
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
