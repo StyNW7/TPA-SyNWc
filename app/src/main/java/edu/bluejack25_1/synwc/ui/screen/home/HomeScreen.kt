@@ -20,6 +20,7 @@ import edu.bluejack25_1.synwc.ui.component.BeautifulBottomNavigationBar
 import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,30 +33,51 @@ fun HomeScreen(
     val currentUser by userViewModel.currentUser.collectAsState()
     val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
 
-    // Get state directly from HomeViewModel (no need for remember since these are already state holders)
+    // Get state directly from HomeViewModel
     val dailyQuestion = homeViewModel.dailyQuestion
     val reflectionAnswer = homeViewModel.reflectionAnswer
     val reflectionHistory = homeViewModel.reflectionHistory
     val showHistory = homeViewModel.showReflectionHistory
+    val hasReflectedToday = homeViewModel.hasReflectedToday
     val currentQuote = homeViewModel.currentQuote
     val searchQuery = homeViewModel.searchQuery
     val searchResults = homeViewModel.searchResults
     val showFavorites = homeViewModel.showFavoriteQuotes
     val favoriteQuotes = homeViewModel.favoriteQuotes
     val errorMessage = homeViewModel.errorMessage
+    val successMessage = homeViewModel.successMessage
     val isLoading = homeViewModel.isLoading
+
+    // Handle auto-dismiss messages
+    LaunchedEffect(successMessage, errorMessage) {
+        if (successMessage != null) {
+            delay(3000)
+            homeViewModel.clearSuccessMessage()
+        }
+    }
 
     // Load user data when screen appears
     LaunchedEffect(Unit) {
         authViewModel.checkAuthState()
         if (userLoggedIn) {
             userViewModel.loadCurrentUser()
+            homeViewModel.refreshAllData()
         }
     }
 
-    // Handle errors with explicit type
+    // Show messages as Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            homeViewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let { success ->
+            snackbarHostState.showSnackbar(success)
         }
     }
 
@@ -70,6 +92,7 @@ fun HomeScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -80,7 +103,10 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { authViewModel.logout() }) {
+                    IconButton(onClick = {
+                        authViewModel.logout()
+                        homeViewModel.refreshAllData()
+                    }) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 },
@@ -95,7 +121,7 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         // Show loading indicator if data is loading
-        if (isLoading) {
+        if (isLoading && currentUser == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -122,6 +148,13 @@ fun HomeScreen(
                     StreakSection(currentUser = currentUser)
                 }
 
+                // Reflection Status Banner
+                if (hasReflectedToday) {
+                    item {
+                        ReflectionStatusBanner(hasReflectedToday = true)
+                    }
+                }
+
                 // Quote Section
                 item {
                     QuoteSection(
@@ -143,6 +176,7 @@ fun HomeScreen(
                         reflectionAnswer = reflectionAnswer,
                         reflectionHistory = reflectionHistory,
                         showHistory = showHistory,
+                        hasReflectedToday = hasReflectedToday,
                         isLoading = isLoading
                     )
                 }
@@ -229,6 +263,39 @@ fun StreakSection(currentUser: edu.bluejack25_1.synwc.data.model.User?) {
 }
 
 @Composable
+fun ReflectionStatusBanner(hasReflectedToday: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (hasReflectedToday) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.secondaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                if (hasReflectedToday) Icons.Default.CheckCircle else Icons.Default.Lightbulb,
+                contentDescription = null,
+                tint = if (hasReflectedToday) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                if (hasReflectedToday) "You've completed today's reflection! ✨"
+                else "Don't forget to complete your daily reflection!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (hasReflectedToday) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+    }
+}
+
+@Composable
 fun StreakItem(title: String, count: Int, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -272,11 +339,11 @@ fun StreakItem(title: String, count: Int, icon: androidx.compose.ui.graphics.vec
 @Composable
 fun QuoteSection(
     homeViewModel: HomeViewModel,
-    currentQuote: edu.bluejack25_1.synwc.data.model.Quote?,
+    currentQuote: Quote?,
     searchQuery: String,
-    searchResults: List<edu.bluejack25_1.synwc.data.model.Quote>,
+    searchResults: List<Quote>,
     showFavorites: Boolean,
-    favoriteQuotes: List<edu.bluejack25_1.synwc.data.model.Quote>,
+    favoriteQuotes: List<Quote>,
     isLoading: Boolean
 ) {
     Card(
@@ -456,7 +523,7 @@ fun CurrentQuoteSection(
 
 @Composable
 fun SearchResultsSection(
-    searchResults: List<edu.bluejack25_1.synwc.data.model.Quote>,
+    searchResults: List<Quote>,
     homeViewModel: HomeViewModel
 ) {
     Column {
@@ -503,7 +570,7 @@ fun SearchResultsSection(
 }
 
 @Composable
-fun FavoriteQuotesSection(favoriteQuotes: List<edu.bluejack25_1.synwc.data.model.Quote>) {
+fun FavoriteQuotesSection(favoriteQuotes: List<Quote>) {
     Column {
         Text(
             "Favorite Quotes (${favoriteQuotes.size})",
@@ -563,6 +630,7 @@ fun ReflectionSection(
     reflectionAnswer: String,
     reflectionHistory: List<edu.bluejack25_1.synwc.data.model.Reflection>,
     showHistory: Boolean,
+    hasReflectedToday: Boolean,
     isLoading: Boolean
 ) {
     Card(
@@ -609,6 +677,7 @@ fun ReflectionSection(
                     dailyQuestion = dailyQuestion,
                     reflectionAnswer = reflectionAnswer,
                     homeViewModel = homeViewModel,
+                    hasReflectedToday = hasReflectedToday,
                     isLoading = isLoading
                 )
             }
@@ -621,6 +690,7 @@ fun CurrentReflectionSection(
     dailyQuestion: String,
     reflectionAnswer: String,
     homeViewModel: HomeViewModel,
+    hasReflectedToday: Boolean,
     isLoading: Boolean
 ) {
     Column {
@@ -663,7 +733,14 @@ fun CurrentReflectionSection(
             shape = RoundedCornerShape(12.dp),
             singleLine = false,
             maxLines = 4,
-            enabled = !isLoading
+            enabled = !isLoading && !hasReflectedToday,
+            placeholder = {
+                if (hasReflectedToday) {
+                    Text("You've already reflected today. Come back tomorrow!")
+                } else {
+                    Text("Write your thoughts here...")
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -671,14 +748,14 @@ fun CurrentReflectionSection(
         Button(
             onClick = { homeViewModel.saveReflection() },
             modifier = Modifier.fillMaxWidth(),
-            enabled = reflectionAnswer.isNotBlank() && !isLoading,
+            enabled = reflectionAnswer.isNotBlank() && !isLoading && !hasReflectedToday,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Save Reflection")
+            Text(if (hasReflectedToday) "Already Reflected Today" else "Save Reflection")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -689,7 +766,7 @@ fun CurrentReflectionSection(
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary
             ),
-            enabled = !isLoading
+            enabled = !isLoading && !hasReflectedToday
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
@@ -727,27 +804,26 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
                             modifier = Modifier.padding(12.dp)
                         ) {
                             Text(
+                                reflection.date,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
                                 reflection.question,
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
                                 reflection.answer,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                reflection.date,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.align(Alignment.End)
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

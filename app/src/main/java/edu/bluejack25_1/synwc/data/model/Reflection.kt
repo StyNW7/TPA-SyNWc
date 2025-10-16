@@ -7,7 +7,7 @@ data class Reflection(
     val answer: String = "",
     val date: String = ""
 ) {
-    fun toMap(): Map<String, Any?> {
+    fun toMap(): Map<String, Any> {
         return mapOf(
             "id" to id,
             "userId" to userId,

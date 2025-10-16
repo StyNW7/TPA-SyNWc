@@ -12,6 +12,7 @@ import java.util.*
 class ReflectionRepository {
     private val db: FirebaseFirestore = Firebase.firestore
     private val auth = Firebase.auth
+    private val streakRepository = StreakRepository()
 
     companion object {
         private const val REFLECTIONS_COLLECTION = "reflections"
@@ -56,10 +57,14 @@ class ReflectionRepository {
                 date = currentDate
             )
 
+            // Save reflection to Firestore
             db.collection(REFLECTIONS_COLLECTION)
                 .document(reflectionId)
                 .set(reflection.toMap())
                 .await()
+
+            // Update reflection streak
+            streakRepository.updateReflectionStreak()
 
             Result.success(reflectionId)
         } catch (e: Exception) {
@@ -90,6 +95,23 @@ class ReflectionRepository {
             }.sortedByDescending { it.date }
 
             Result.success(reflections)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun hasReflectedToday(): Result<Boolean> {
+        return try {
+            val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
+            val currentDate = getCurrentDate()
+
+            val snapshot = db.collection(REFLECTIONS_COLLECTION)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("date", currentDate)
+                .get()
+                .await()
+
+            Result.success(!snapshot.isEmpty)
         } catch (e: Exception) {
             Result.failure(e)
         }
