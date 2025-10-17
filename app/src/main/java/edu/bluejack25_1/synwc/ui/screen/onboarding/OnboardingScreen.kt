@@ -27,6 +27,7 @@ import androidx.navigation.NavController
 import com.google.accompanist.pager.*
 import edu.bluejack25_1.synwc.R
 import edu.bluejack25_1.synwc.ui.viewmodel.OnboardingViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -37,6 +38,14 @@ fun OnboardingScreen(
 ) {
     val pagerState = rememberPagerState()
     val totalPages = viewModel.getTotalPages()
+    val coroutineScope = rememberCoroutineScope()
+
+    // Sync ViewModel state with pager state
+    val currentPageFromViewModel by viewModel.currentPage.collectAsState()
+
+    LaunchedEffect(currentPageFromViewModel) {
+        pagerState.animateScrollToPage(currentPageFromViewModel)
+    }
 
     Box(
         modifier = Modifier
@@ -162,6 +171,7 @@ fun OnboardingScreen(
 
                     val currentPage = pagerState.currentPage
                     val pageData = viewModel.getPageData(currentPage)
+                    val isLastPage = currentPage == totalPages - 1
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -237,48 +247,16 @@ fun OnboardingScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Enhanced Navigation Buttons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Skip button with modern styling
-                            TextButton(
-                                onClick = {
-                                    if (pagerState.currentPage == totalPages - 1) {
-                                        onGetStartedClick()
-                                    } else {
-                                        viewModel.skipToEnd()
-                                    }
-                                },
-                                modifier = Modifier.padding(start = 8.dp)
-                            ) {
-                                Text(
-                                    text = "Skip",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    letterSpacing = 0.5.sp
-                                )
-                            }
-
-                            val currentPage by viewModel.currentPage.collectAsState()
-
-                            LaunchedEffect(currentPage) {
-                                pagerState.animateScrollToPage(currentPage)
-                            }
-
-                            // Next/Get Started button with elevated design
+                        if (isLastPage) {
+                            // Single Get Started button for last page
                             Button(
                                 onClick = {
-                                    if (pagerState.currentPage < totalPages - 1) {
-                                        viewModel.nextPage()
-                                    } else {
-                                        viewModel.skipToEnd()
+                                    onGetStartedClick()
+                                    navController.navigate("login") {
+                                        popUpTo("onboarding") { inclusive = true }
                                     }
                                 },
-                                shape = CircleShape,
+                                shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
                                 ),
@@ -287,19 +265,78 @@ fun OnboardingScreen(
                                     pressedElevation = 12.dp
                                 ),
                                 modifier = Modifier
-                                    .size(64.dp)
+                                    .fillMaxWidth()
+                                    .height(56.dp)
                                     .shadow(
                                         elevation = 12.dp,
-                                        shape = CircleShape,
+                                        shape = RoundedCornerShape(16.dp),
                                         spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                                     )
                             ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_arrow_right),
-                                    contentDescription = "Next",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp)
+                                Text(
+                                    text = "Get Started",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 0.5.sp
                                 )
+                            }
+                        } else {
+                            // Navigation Buttons for non-last pages
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Skip button with modern styling
+                                TextButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            viewModel.skipToEnd()
+                                            // The LaunchedEffect above will handle the pager animation
+                                        }
+                                    },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Text(
+                                        text = "Skip",
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+
+                                // Next button with elevated design
+                                Button(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            viewModel.nextPage()
+                                            // The LaunchedEffect above will handle the pager animation
+                                        }
+                                    },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    elevation = ButtonDefaults.buttonElevation(
+                                        defaultElevation = 8.dp,
+                                        pressedElevation = 12.dp
+                                    ),
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .shadow(
+                                            elevation = 12.dp,
+                                            shape = CircleShape,
+                                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                        )
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_arrow_right),
+                                        contentDescription = "Next",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
