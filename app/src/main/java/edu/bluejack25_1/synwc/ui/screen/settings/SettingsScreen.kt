@@ -14,11 +14,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -47,8 +53,6 @@ fun SettingsScreen(
     )
 
     val themeMode by settingsViewModel.themeMode.collectAsState()
-//    val themeMode by settingsViewModel.themeMode.collectAsState(initial = "system")
-
     val userName by settingsViewModel.userName.collectAsState(initial = "")
     val userEmail by settingsViewModel.userEmail.collectAsState(initial = "")
     val profileImageUrl by settingsViewModel.profileImageUrl.collectAsState(initial = "")
@@ -117,23 +121,32 @@ fun SettingsScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "Settings",
-                        style = MaterialTheme.typography.titleLarge,
+                        "SyNWc - Settings",
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 actions = {
-                    IconButton(onClick = {
-                        authViewModel.logout(settingsViewModel)
-                        navController.navigate("login") {
-                            popUpTo("settings") { inclusive = true }
-                        }
-                    }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Logout")
+                    IconButton(
+                        onClick = {
+                            authViewModel.logout(settingsViewModel)
+                            navController.navigate("login") {
+                                popUpTo("settings") { inclusive = true }
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
         },
@@ -142,25 +155,48 @@ fun SettingsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f),
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.05f)
+                        )
+                    )
+                )
+        ) {
+            // Decorative background elements
+            Box(
+                modifier = Modifier
+                    .size(250.dp)
+                    .offset(x = (-80).dp, y = 100.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                        CircleShape
+                    )
+                    .blur(60.dp)
+            )
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background)
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 // Profile Section
                 item {
-                    SettingsSection(title = "Profile") {
-                        ProfileCard(
-                            userName = userName,
-                            userEmail = userEmail,
-                            profileImageUrl = profileImageUrl,
-                            isLoading = isLoading,
-                            onEditProfile = { settingsViewModel.showEditProfile() },
-                            onChangePhoto = { settingsViewModel.showImagePicker() }
-                        )
-                    }
+                    ProfileCard(
+                        userName = userName,
+                        userEmail = userEmail,
+                        profileImageUrl = profileImageUrl,
+                        isLoading = isLoading,
+                        onEditProfile = { settingsViewModel.showEditProfile() },
+                        onChangePhoto = { settingsViewModel.showImagePicker() }
+                    )
                 }
 
                 // Appearance Section
@@ -179,49 +215,38 @@ fun SettingsScreen(
                         AboutSection()
                     }
                 }
-
-                // Sync Section
-//                item {
-//                    SettingsSection(title = "Data") {
-//                        SyncSection(
-//                            onSyncData = {
-//                                settingsViewModel.loadUserData()
-//                                imageUpdateTrigger++
-//                            },
-//                            isLoading = isLoading
-//                        )
-//                    }
-//                }
-
-                // Debug Section
-//                item {
-//                    SettingsSection(title = "Debug Info") {
-//                        DebugInfoCard(
-//                            profileImageUrl = profileImageUrl,
-//                            isLoading = isLoading,
-//                            errorMessage = errorMessage,
-//                            imageUpdateTrigger = imageUpdateTrigger,
-//                            onReload = {
-//                                settingsViewModel.loadUserData()
-//                                imageUpdateTrigger++
-//                            }
-//                        )
-//                    }
-//                }
             }
 
-            // Loading indicator
+            // Loading indicator with backdrop
             if (isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)),
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Uploading image...", color = MaterialTheme.colorScheme.onSurface)
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 12.dp,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                strokeWidth = 4.dp
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                "Uploading image...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -260,57 +285,95 @@ fun ProfileCard(
     onEditProfile: () -> Unit,
     onChangePhoto: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+        Box {
+            // Gradient accent at top
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+                            )
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Profile Image with better loading states
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Profile Image
                 ProfileImage(
                     profileImageUrl = profileImageUrl,
                     isLoading = isLoading,
                     onChangePhoto = onChangePhoto
                 )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // User Info
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = userName.ifEmpty { "Your Name" },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                Text(
+                    text = userName.ifEmpty { "Your Name" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-                    Text(
-                        text = userEmail.ifEmpty { "your.email@example.com" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Edit Button
-                IconButton(
+                Text(
+                    text = userEmail.ifEmpty { "your.email@example.com" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Edit Profile Button
+                Button(
                     onClick = onEditProfile,
-                    modifier = Modifier.size(48.dp),
-                    enabled = !isLoading
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    enabled = !isLoading,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 0.dp
+                    )
                 ) {
                     Icon(
                         Icons.Default.Edit,
-                        contentDescription = "Edit profile",
-                        tint = MaterialTheme.colorScheme.primary
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Edit Profile",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
                     )
                 }
             }
@@ -327,68 +390,124 @@ fun ProfileImage(
     var imageLoadError by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
-            .size(80.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(
-                enabled = !isLoading,
-                onClick = onChangePhoto
-            ),
         contentAlignment = Alignment.Center
     ) {
-        if (isLoading) {
-            // Show loading indicator while uploading
-            CircularProgressIndicator(
-                modifier = Modifier.size(30.dp),
-                strokeWidth = 2.dp
-            )
-        } else if (profileImageUrl.isNotEmpty() && !imageLoadError) {
-            // Show profile image with proper caching
-            Image(
-                painter = rememberAsyncImagePainter(
-                    model = profileImageUrl,
-                    onSuccess = {
-                        println("Profile image loaded successfully: $profileImageUrl")
-                        imageLoadError = false
-                    },
-                    onError = {
-                        println("Failed to load profile image: $profileImageUrl")
-                        imageLoadError = true
-                    }
-                ),
-                contentDescription = "Profile picture",
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            // Show app logo as default when no image is set
-            // Replace with your actual app logo - you can use a vector asset or drawable
-            Icon(
-                Icons.Default.AccountCircle, // Replace with your app logo icon
-                contentDescription = "Default profile picture",
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        // Edit icon overlay (only show when not loading)
-        if (!isLoading) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f))
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = "Change photo",
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
+        // Glow effect behind image
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            Color.Transparent
+                        )
+                    ),
+                    CircleShape
                 )
+                .blur(30.dp)
+        )
+
+        // Main profile image container
+        Box(
+            modifier = Modifier
+                .size(110.dp)
+                .shadow(
+                    elevation = 12.dp,
+                    shape = CircleShape,
+                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                )
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(
+                    enabled = !isLoading,
+                    onClick = onChangePhoto
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isLoading) {
+                // Show loading indicator while uploading
+                CircularProgressIndicator(
+                    modifier = Modifier.size(36.dp),
+                    strokeWidth = 3.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else if (profileImageUrl.isNotEmpty() && !imageLoadError) {
+                // Show profile image with proper caching
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = profileImageUrl,
+                        onSuccess = {
+                            println("Profile image loaded successfully: $profileImageUrl")
+                            imageLoadError = false
+                        },
+                        onError = {
+                            println("Failed to load profile image: $profileImageUrl")
+                            imageLoadError = true
+                        }
+                    ),
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+
+                // Edit icon overlay
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = (-2).dp, y = (-2).dp)
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = CircleShape
+                        )
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Change photo",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            } else {
+                // Show default icon
+                Icon(
+                    Icons.Default.AccountCircle,
+                    contentDescription = "Default profile picture",
+                    modifier = Modifier.size(60.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+
+                // Edit icon overlay for default state
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = (-2).dp, y = (-2).dp)
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = CircleShape
+                        )
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.CameraAlt,
+                        contentDescription = "Add photo",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
     }
@@ -401,38 +520,72 @@ fun ImagePickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Change Profile Picture") },
-        text = { Text("Choose how you want to set your profile picture") },
+        icon = {
+            Icon(
+                Icons.Default.CameraAlt,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                "Change Profile Picture",
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Text(
+                "Choose how you want to set your profile picture",
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
         confirmButton = {
-            Button(onClick = onPickFromGallery) {
+            Button(
+                onClick = onPickFromGallery,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Choose from Gallery")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Cancel")
             }
-        }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
     )
 }
 
-// The rest of your composable functions remain the same (SettingsSection, ThemeSelector, ThemeOption, AboutSection, SyncSection, EditProfileDialog)
 @Composable
 fun SettingsSection(
     title: String,
     content: @Composable () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 16.dp)
+            fontSize = 18.sp,
+            modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
         )
         content()
     }
@@ -443,61 +596,74 @@ fun ThemeSelector(
     currentTheme: String,
     onThemeSelected: (String) -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            ListItem(
-                headlineContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 20.dp)
+            ) {
+                Icon(
+                    Icons.Default.Palette,
+                    contentDescription = "Theme",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
                     Text(
-                        "Theme",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        "Theme Mode",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp
                     )
-                },
-                supportingContent = {
-                    Text("Choose your preferred theme mode")
-                },
-                leadingContent = {
-                    Icon(
-                        Icons.Default.DarkMode,
-                        contentDescription = "Theme",
-                        tint = MaterialTheme.colorScheme.primary
+                    Text(
+                        "Choose your preferred appearance",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
                     )
                 }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ThemeOption(
                     title = "Light",
                     icon = Icons.Default.LightMode,
                     isSelected = currentTheme == "light",
-                    onClick = { onThemeSelected("light") }
+                    onClick = { onThemeSelected("light") },
+                    modifier = Modifier.weight(1f)
                 )
 
                 ThemeOption(
                     title = "Dark",
                     icon = Icons.Default.DarkMode,
                     isSelected = currentTheme == "dark",
-                    onClick = { onThemeSelected("dark") }
+                    onClick = { onThemeSelected("dark") },
+                    modifier = Modifier.weight(1f)
                 )
 
                 ThemeOption(
                     title = "System",
                     icon = Icons.Default.Settings,
                     isSelected = currentTheme == "system",
-                    onClick = { onThemeSelected("system") }
+                    onClick = { onThemeSelected("system") },
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -509,112 +675,140 @@ fun ThemeOption(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable { onClick() }
-            .padding(8.dp)
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        tonalElevation = if (isSelected) 4.dp else 0.dp,
+        shadowElevation = if (isSelected) 4.dp else 0.dp
     ) {
-        Card(
-            modifier = Modifier.size(60.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                }
-            ),
-            shape = CircleShape,
-            elevation = if (isSelected) CardDefaults.cardElevation(4.dp) else CardDefaults.cardElevation(1.dp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)
         ) {
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = title,
-                    tint = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.size(30.dp)
-                )
-            }
+            Icon(
+                icon,
+                contentDescription = title,
+                tint = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(32.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 13.sp,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
-        )
     }
 }
 
 @Composable
 fun AboutSection() {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        "About SyNWc",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                },
-                leadingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         Icons.Default.Info,
                         contentDescription = "About",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
-            )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    "About SyNWc",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            }
 
             Text(
                 text = "SyNWc (Sync Your Notes With Clarity) is a modern note-taking app designed to help you organize your thoughts, track your progress, and reflect on your journey.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                lineHeight = 22.sp,
+                fontSize = 14.sp
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // App version
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Version",
+                    "App Version",
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    "1.0.0",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        "1.0.0",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
             }
         }
     }
@@ -625,50 +819,69 @@ fun SyncSection(
     onSyncData: () -> Unit,
     isLoading: Boolean
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        "Data Sync",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                },
-                supportingContent = {
-                    Text("Sync your data with the cloud")
-                },
-                leadingContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         Icons.Default.Sync,
                         contentDescription = "Sync",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
                     )
-                },
-                trailingContent = {
-                    Button(
-                        onClick = onSyncData,
-                        enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text("Sync Now")
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Data Sync",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            "Sync with cloud",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
                     }
                 }
-            )
+
+                Button(
+                    onClick = onSyncData,
+                    enabled = !isLoading,
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Sync", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
         }
     }
 }
@@ -683,45 +896,95 @@ fun EditProfileDialog(
 ) {
     AlertDialog(
         onDismissRequest = { if (!isLoading) settingsViewModel.hideEditProfile() },
-        title = { Text("Edit Profile") },
+        icon = {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                "Edit Profile",
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                textAlign = TextAlign.Center
+            )
+        },
         text = {
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 if (!errorMessage.isNullOrEmpty()) {
-                    Text(
-                        text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                 }
 
                 OutlinedTextField(
                     value = settingsViewModel.editedName,
                     onValueChange = { settingsViewModel.updateEditedName(it) },
                     label = { Text("Name") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                    placeholder = { Text("Enter your name") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    enabled = !isLoading
+                    enabled = !isLoading,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
 
                 OutlinedTextField(
                     value = settingsViewModel.editedEmail,
                     onValueChange = { settingsViewModel.updateEditedEmail(it) },
                     label = { Text("Email") },
+                    placeholder = { Text("Enter your email") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Email,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    enabled = !isLoading
+                    enabled = !isLoading,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
 
                 if (isLoading) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp
+                        )
                     }
                 }
             }
@@ -731,26 +994,40 @@ fun EditProfileDialog(
                 onClick = { settingsViewModel.saveProfile() },
                 enabled = settingsViewModel.editedName.isNotEmpty() &&
                         settingsViewModel.editedEmail.isNotEmpty() &&
-                        !isLoading
+                        !isLoading,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(vertical = 14.dp)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Save")
+                Text(
+                    "Save Changes",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp
+                )
             }
         },
         dismissButton = {
             TextButton(
                 onClick = { settingsViewModel.hideEditProfile() },
-                enabled = !isLoading
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancel")
+                Text(
+                    "Cancel",
+                    fontSize = 15.sp
+                )
             }
-        }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
     )
 }
