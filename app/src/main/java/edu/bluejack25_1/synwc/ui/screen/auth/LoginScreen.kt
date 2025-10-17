@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -34,7 +35,7 @@ fun LoginScreen(
     navController: NavController,
     viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    var email by remember { mutableStateOf("") }
+    var identifier by remember { mutableStateOf("") } // Changed from email to identifier
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -153,7 +154,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Sign in to continue to SyNWc",
+                    "Sign in with email or username",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center
@@ -179,21 +180,21 @@ fun LoginScreen(
                     modifier = Modifier.padding(28.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Email Field
+                    // Identifier Field (Email or Username)
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email Address") },
-                        placeholder = { Text("Enter your email") },
+                        value = identifier,
+                        onValueChange = { identifier = it },
+                        label = { Text("Email or Username") },
+                        placeholder = { Text("Enter your email or username") },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Email,
+                                imageVector = Icons.Default.Person, // Changed from Email to Person
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -239,7 +240,7 @@ fun LoginScreen(
 
                     // Login Button
                     Button(
-                        onClick = { viewModel.login(email, password) },
+                        onClick = { viewModel.login(identifier, password) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)

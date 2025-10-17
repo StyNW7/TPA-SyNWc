@@ -26,6 +26,26 @@ class AuthRepository {
         }
     }
 
+    suspend fun loginWithEmailOrUsername(identifier: String, password: String): Result<Unit> {
+        return try {
+            // First, check if the identifier is an email
+            if (isValidEmail(identifier)) {
+                // If it's a valid email format, try to login directly
+                return loginUser(identifier, password)
+            } else {
+                // If it's not an email, assume it's a username and find the associated email
+                val userEmail = userRepository.findEmailByUsername(identifier)
+                if (userEmail != null) {
+                    return loginUser(userEmail, password)
+                } else {
+                    return Result.failure(Exception("No account found with this username"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun registerUser(username: String, email: String, password: String): Result<Unit> {
         return try {
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
@@ -38,25 +58,11 @@ class AuthRepository {
                 user.updateProfile(profileUpdates).await()
 
                 // Create user in Firestore with proper streak initialization
-
                 val newUser = User.createNewUser(
                     id = user.uid,
                     name = username,
                     email = email
                 )
-
-//                val newUser = User(
-//                    id = user.uid,
-//                    name = username,
-//                    email = email,
-//                    joinDate = System.currentTimeMillis(),
-//                    loginStreak = 1, // Start with 1 for registration day
-//                    todoStreak = 0,
-//                    reflectionStreak = 0,
-//                    lastLoginDate = User.getCurrentDate(),
-//                    lastTodoDate = "", // Empty until first todo completion
-//                    lastReflectionDate = "" // Empty until first reflection
-//                )
 
                 val createUserResult = userRepository.createUser(newUser)
                 if (createUserResult.isFailure) {
@@ -74,4 +80,9 @@ class AuthRepository {
     fun getCurrentUser() = auth.currentUser
     fun isUserLoggedIn() = auth.currentUser != null
     fun logout() = auth.signOut()
+
+    private fun isValidEmail(email: String): Boolean {
+        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+        return emailRegex.matches(email)
+    }
 }

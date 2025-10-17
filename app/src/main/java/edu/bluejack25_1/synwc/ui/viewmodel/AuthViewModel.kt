@@ -29,20 +29,16 @@ class AuthViewModel : ViewModel() {
     private val _userLoggedIn = MutableStateFlow(repository.isUserLoggedIn())
     val userLoggedIn = _userLoggedIn.asStateFlow()
 
-    fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
+    fun login(identifier: String, password: String) {
+        if (identifier.isBlank() || password.isBlank()) {
             _errorMessage.value = "Please fill all fields."
-            return
-        }
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _errorMessage.value = "Invalid email format."
             return
         }
 
         viewModelScope.launch {
             _loading.value = true
             _errorMessage.value = null
-            val result = repository.loginUser(email, password)
+            val result = repository.loginWithEmailOrUsername(identifier, password)
             _loading.value = false
             result.onSuccess {
                 _success.value = true
@@ -165,10 +161,11 @@ class AuthViewModel : ViewModel() {
         return when {
             errorMessage.contains("badly formatted") -> "Invalid email format."
             errorMessage.contains("password is invalid") -> "Invalid password."
-            errorMessage.contains("no user record") -> "No account found with this email."
+            errorMessage.contains("no user record") -> "No account found with this email or username."
             errorMessage.contains("email address is already in use") -> "Email already registered."
             errorMessage.contains("network error") -> "Network error. Please check your connection."
             errorMessage.contains("WEAK_PASSWORD") -> "Password is too weak. Please use a stronger password."
+            errorMessage.contains("No account found with this username") -> "No account found with this username."
             else -> "Authentication failed: ${exception.message}"
         }
     }

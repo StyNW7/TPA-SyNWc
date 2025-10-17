@@ -16,6 +16,25 @@ class UserRepository {
         private const val USERS_COLLECTION = "users"
     }
 
+    // Add this method to find email by username
+    suspend fun findEmailByUsername(username: String): String? {
+        return try {
+            val query = db.collection(USERS_COLLECTION)
+                .whereEqualTo("name", username.trim())
+                .get()
+                .await()
+
+            if (!query.isEmpty && query.documents.isNotEmpty()) {
+                val user = query.documents[0].toObject(User::class.java)
+                user?.email
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     // Check if email already exists
     suspend fun isEmailExists(email: String): Boolean {
         return try {
@@ -45,7 +64,7 @@ class UserRepository {
     }
 
     // Create user with validation
-    suspend fun createUser(user: User): Result<Unit> {
+    suspend fun createUserWithValidation(user: User): Result<Unit> {
         return try {
             // Validate email uniqueness
             if (isEmailExists(user.email)) {
@@ -77,34 +96,21 @@ class UserRepository {
         }
     }
 
-    // Update user profile with validation (for existing users)
-    suspend fun updateUserProfileWithValidation(userId: String, name: String, email: String): Result<Unit> {
+    suspend fun createUser(user: User): Result<Unit> {
         return try {
-            // Get current user data
-            val currentUser = getUser(userId).getOrNull()
-
-            // Check if email is being changed and validate uniqueness
-            if (currentUser?.email != email.trim().lowercase()) {
-                if (isEmailExists(email)) {
-                    return Result.failure(Exception("Email already exists"))
-                }
-            }
-
-            // Check if username is being changed and validate uniqueness
-            if (currentUser?.name != name.trim()) {
-                if (isUsernameExists(name)) {
-                    return Result.failure(Exception("Username already exists"))
-                }
-            }
-
-            val updates = mapOf(
-                "name" to name.trim(),
-                "email" to email.trim().lowercase()
+            // Initialize with proper streak data
+            val newUser = user.copy(
+                loginStreak = 1,
+                todoStreak = 0,
+                reflectionStreak = 0,
+                lastLoginDate = User.getCurrentDate(),
+                lastTodoDate = "", // Empty means no todo activity yet
+                lastReflectionDate = "" // Empty means no reflection activity yet
             )
 
             db.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(updates)
+                .document(newUser.id)
+                .set(newUser.toMap())
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
