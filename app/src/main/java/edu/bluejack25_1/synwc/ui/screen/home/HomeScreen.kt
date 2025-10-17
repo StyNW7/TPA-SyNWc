@@ -1,6 +1,6 @@
 package edu.bluejack25_1.synwc.ui.screen.home
 
-import android.graphics.Color
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,12 +9,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import edu.bluejack25_1.synwc.data.model.Quote
@@ -23,15 +34,9 @@ import edu.bluejack25_1.synwc.ui.viewmodel.AuthViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.HomeViewModel
 import edu.bluejack25_1.synwc.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.vector.ImageVector
-
 import androidx.compose.ui.graphics.Color as ComposeColor
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.style.TextAlign
+import edu.bluejack25_1.synwc.ui.viewmodel.SettingsViewModel
+import edu.bluejack25_1.synwc.ui.viewmodel.SettingsViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,12 +44,16 @@ fun HomeScreen(
     navController: NavController,
     authViewModel: AuthViewModel = viewModel(),
     userViewModel: UserViewModel = viewModel(),
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    context: Context = LocalContext.current
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
     val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
 
-    // Get state directly from HomeViewModel
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(context)
+    )
+
     val dailyQuestion = homeViewModel.dailyQuestion
     val reflectionAnswer = homeViewModel.reflectionAnswer
     val reflectionHistory = homeViewModel.reflectionHistory
@@ -67,7 +76,6 @@ fun HomeScreen(
         }
     }
 
-    // Show messages as Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(errorMessage) {
@@ -89,8 +97,6 @@ fun HomeScreen(
         if (userLoggedIn) {
             userViewModel.loadCurrentUser()
             homeViewModel.refreshAllData()
-
-            // Update login streak when user opens the app
             authViewModel.updateLoginStreak()
         }
     }
@@ -106,28 +112,36 @@ fun HomeScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
                         "SyNWc",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                 },
-
                 actions = {
-                    IconButton(onClick = {
-                        authViewModel.logout()
-                        homeViewModel.refreshAllData()
-                    }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Logout")
+                    IconButton(
+                        onClick = {
+                            authViewModel.logout(settingsViewModel)
+                            navController.navigate("login") {
+                                popUpTo("settings") { inclusive = true }
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 },
-
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
         },
@@ -136,7 +150,6 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        // Show loading indicator if data is loading
         if (isLoading && currentUser == null) {
             Box(
                 modifier = Modifier
@@ -144,62 +157,103 @@ fun HomeScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Loading your dashboard...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         } else {
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = innerPadding,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f),
+                                MaterialTheme.colorScheme.background,
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.03f)
+                            )
+                        )
+                    )
             ) {
-                // Welcome Section
-                item {
-                    WelcomeSection(currentUser = currentUser)
-                }
+                // Background decorative elements
+                Box(
+                    modifier = Modifier
+                        .size(250.dp)
+                        .offset(x = (-80).dp, y = 200.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.04f),
+                            CircleShape
+                        )
+                )
 
-                // Streak Section
-                item {
-                    StreakSection(currentUser = currentUser)
-                }
-
-                // Reflection Status Banner
-                if (hasReflectedToday) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding() + 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                        start = 20.dp,
+                        end = 20.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Welcome Section
                     item {
-                        ReflectionStatusBanner(hasReflectedToday = true)
+                        WelcomeSection(currentUser = currentUser)
                     }
-                }
 
-                // Quote Section
-                item {
-                    QuoteSection(
-                        homeViewModel = homeViewModel,
-                        currentQuote = currentQuote,
-                        searchQuery = searchQuery,
-                        searchResults = searchResults,
-                        showFavorites = showFavorites,
-                        favoriteQuotes = favoriteQuotes,
-                        isLoading = isLoading
-                    )
-                }
+                    // Reflection Status Banner
+                    if (hasReflectedToday) {
+                        item {
+                            ReflectionStatusBanner(hasReflectedToday = true)
+                        }
+                    }
 
-                // Reflection Section
-                item {
-                    ReflectionSection(
-                        homeViewModel = homeViewModel,
-                        dailyQuestion = dailyQuestion,
-                        reflectionAnswer = reflectionAnswer,
-                        reflectionHistory = reflectionHistory,
-                        showHistory = showHistory,
-                        hasReflectedToday = hasReflectedToday,
-                        isLoading = isLoading
-                    )
-                }
+                    // Streak Section
+                    item {
+                        StreakSection(currentUser = currentUser)
+                    }
 
-                // Add bottom spacer
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Quote Section
+                    item {
+                        QuoteSection(
+                            homeViewModel = homeViewModel,
+                            currentQuote = currentQuote,
+                            searchQuery = searchQuery,
+                            searchResults = searchResults,
+                            showFavorites = showFavorites,
+                            favoriteQuotes = favoriteQuotes,
+                            isLoading = isLoading
+                        )
+                    }
+
+                    // Reflection Section
+                    item {
+                        ReflectionSection(
+                            homeViewModel = homeViewModel,
+                            dailyQuestion = dailyQuestion,
+                            reflectionAnswer = reflectionAnswer,
+                            reflectionHistory = reflectionHistory,
+                            showHistory = showHistory,
+                            hasReflectedToday = hasReflectedToday,
+                            isLoading = isLoading
+                        )
+                    }
+
+                    // Bottom Spacer
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
                 }
             }
         }
@@ -208,86 +262,237 @@ fun HomeScreen(
 
 @Composable
 fun WelcomeSection(currentUser: edu.bluejack25_1.synwc.data.model.User?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "Welcome back, ${currentUser?.name ?: "User"}!",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+            // User Avatar
+            Box(
+                modifier = Modifier
+                    .size(70.dp)
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = CircleShape,
+                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                    )
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
             )
-            Text(
-                "Here's your daily inspiration and reflection",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            )
+
+            {
+                Text(
+                    text = currentUser?.name?.firstOrNull()?.uppercase() ?: "U",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = ComposeColor.White,
+                    fontSize = 28.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(20.dp))
+
+            // Welcome Text
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    "Welcome back,",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    currentUser?.name ?: "User",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 22.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Ready to make today amazing? 🌟",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    fontSize = 12.sp
+                )
+            }
+
+            // Date Badge
+            Surface(
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(32.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        getFormattedDate(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReflectionStatusBanner(hasReflectedToday: Boolean) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        color = if (hasReflectedToday)
+            MaterialTheme.colorScheme.primaryContainer
+        else
+            MaterialTheme.colorScheme.secondaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        if (hasReflectedToday)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        else
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (hasReflectedToday) Icons.Rounded.CheckCircle else Icons.Rounded.Lightbulb,
+                    contentDescription = null,
+                    tint = if (hasReflectedToday)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    if (hasReflectedToday) "Reflection Complete" else "Daily Reflection",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (hasReflectedToday)
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    else
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    if (hasReflectedToday) "Great job! Come back tomorrow."
+                    else "Take a moment to reflect on today.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (hasReflectedToday)
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    else
+                        MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }
 
 @Composable
 fun StreakSection(currentUser: edu.bluejack25_1.synwc.data.model.User?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(16.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(24.dp)
         ) {
-            Text(
-                "Your Streaks 🔥",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Rounded.LocalFireDepartment,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "Activity Streaks",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Streak Items
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                BeautifulStreakItem(
+                StreakCard(
                     title = "Login",
                     count = currentUser?.loginStreak ?: 0,
                     icon = Icons.Rounded.Person,
-                    gradientColors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    description = "Daily login streak"
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
                 )
-                BeautifulStreakItem(
-                    title = "To-Do",
+                StreakCard(
+                    title = "Tasks",
                     count = currentUser?.todoStreak ?: 0,
                     icon = Icons.Rounded.CheckCircle,
-                    gradientColors = listOf(
-                        MaterialTheme.colorScheme.secondary,
-                        MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    description = "Tasks completed"
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f)
                 )
-                BeautifulStreakItem(
-                    title = "Reflection",
+                StreakCard(
+                    title = "Reflect",
                     count = currentUser?.reflectionStreak ?: 0,
                     icon = Icons.Rounded.Lightbulb,
-                    gradientColors = listOf(
-                        MaterialTheme.colorScheme.tertiary,
-                        MaterialTheme.colorScheme.tertiaryContainer
-                    ),
-                    description = "Daily reflections"
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -295,159 +500,69 @@ fun StreakSection(currentUser: edu.bluejack25_1.synwc.data.model.User?) {
 }
 
 @Composable
-fun BeautifulStreakItem(
+fun StreakCard(
     title: String,
     count: Int,
     icon: ImageVector,
-    gradientColors: List<ComposeColor>,
-    description: String
+    color: ComposeColor,
+    modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(100.dp)
-    ) {
-        // Gradient background with icon
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .shadow(
-                    elevation = 8.dp,
-                    shape = CircleShape,
-                    clip = false
-                )
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = gradientColors
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = title,
-                tint = ComposeColor.White,
-                modifier = Modifier.size(32.dp)
-            )
-
-            // Small flame indicator for active streaks
-            if (count > 0) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(16.dp)
-                        .background(ComposeColor.Red, CircleShape)
-                        .padding(2.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "🔥",
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Streak count with nice styling
-        Text(
-            "$count",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        // Title
-        Text(
-            title,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        // Description
-        Text(
-            description,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 2.dp)
-        )
-    }
-}
-
-@Composable
-fun ReflectionStatusBanner(hasReflectedToday: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (hasReflectedToday) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.secondaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                if (hasReflectedToday) Icons.Default.CheckCircle else Icons.Default.Lightbulb,
-                contentDescription = null,
-                tint = if (hasReflectedToday) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                if (hasReflectedToday) "You've completed today's reflection! ✨"
-                else "Don't forget to complete your daily reflection!",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (hasReflectedToday) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
-    }
-}
-
-@Composable
-fun StreakItem(title: String, count: Int, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Card(
-            modifier = Modifier.size(60.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+    Surface(
+        modifier = modifier
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = color.copy(alpha = 0.2f)
             ),
-            shape = CircleShape
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(16.dp)
         ) {
+            // Icon with background
             Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     icon,
                     contentDescription = title,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    tint = color,
                     modifier = Modifier.size(24.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Count
+            Text(
+                "$count",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Title
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Days label
+            Text(
+                "days",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            "$count days",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Text(
-            title,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -461,29 +576,55 @@ fun QuoteSection(
     favoriteQuotes: List<Quote>,
     isLoading: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(24.dp)
         ) {
+            // Header with actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Daily Quote 💭",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Rounded.FormatQuote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Daily Inspiration",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
-                Row {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(
+                        onClick = { homeViewModel.toggleFavoriteQuotes() },
+                        modifier = Modifier.size(36.dp),
+                        enabled = !isLoading
+                    ) {
+                        Icon(
+                            if (showFavorites) Icons.Rounded.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = "Favorite quotes",
+                            tint = if (showFavorites) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(
                         onClick = { homeViewModel.loadDailyQuote() },
                         modifier = Modifier.size(36.dp),
@@ -496,61 +637,108 @@ fun QuoteSection(
                             )
                         } else {
                             Icon(
-                                Icons.Default.Refresh,
+                                Icons.Rounded.Refresh,
                                 contentDescription = "Refresh quote",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-                    IconButton(
-                        onClick = { homeViewModel.toggleFavoriteQuotes() },
-                        modifier = Modifier.size(36.dp),
-                        enabled = !isLoading
-                    ) {
-                        Icon(
-                            Icons.Default.Favorite,
-                            contentDescription = "Favorite quotes",
-                            tint = if (showFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (showFavorites) {
                 FavoriteQuotesSection(favoriteQuotes = favoriteQuotes)
             } else {
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { homeViewModel.updateSearchQuery(it) },
-                    label = { Text("Search quotes...") },
+                // Search Bar with Search Button
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        IconButton(
-                            onClick = { homeViewModel.searchQuotes() },
-                            enabled = !isLoading && searchQuery.isNotBlank()
-                        ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { homeViewModel.updateSearchQuery(it) },
+                        placeholder = { Text("Search quotes...") },
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotBlank()) {
+                                IconButton(onClick = { homeViewModel.updateSearchQuery("") }) {
+                                    Icon(Icons.Rounded.Clear, contentDescription = "Clear")
+                                }
                             }
+                        },
+                        singleLine = true,
+                        enabled = !isLoading,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        )
+                    )
+
+                    // Search Button
+                    Button(
+                        onClick = { homeViewModel.searchQuotes() },
+                        modifier = Modifier.height(56.dp),
+                        enabled = !isLoading && searchQuery.isNotBlank(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = ComposeColor.White
+                            )
+                        } else {
+                            Icon(
+                                Icons.Rounded.Search,
+                                contentDescription = "Search",
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-                    },
-                    singleLine = true,
-                    enabled = !isLoading
-                )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Current Quote or Search Results
+                // Content
                 if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
                     SearchResultsSection(searchResults = searchResults, homeViewModel = homeViewModel)
+                } else if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
+                    // Show empty state when search has no results
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "No quotes found for \"$searchQuery\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 } else {
                     CurrentQuoteSection(currentQuote = currentQuote, homeViewModel = homeViewModel, isLoading = isLoading)
                 }
@@ -570,35 +758,55 @@ fun CurrentQuoteSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
+                    .height(120.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         } else {
             currentQuote?.let { quote ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                // Quote Card
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 3.dp,
+                            shape = RoundedCornerShape(16.dp)
+                        ),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(20.dp)
                     ) {
+                        Icon(
+                            Icons.Rounded.FormatQuote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            modifier = Modifier.size(28.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         Text(
                             "\"${quote.text}\"",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            lineHeight = 22.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            "- ${quote.author}",
+                            "— ${quote.author}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.align(Alignment.End)
                         )
                     }
@@ -606,30 +814,51 @@ fun CurrentQuoteSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Save to Favorites Button
                 Button(
                     onClick = { homeViewModel.saveFavoriteQuote() },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
                     enabled = !isLoading
                 ) {
-                    Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save to Favorites")
+                    Text(
+                        "Save to Favorites",
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             } ?: run {
+                // Empty State
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp),
+                        .height(120.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "No quote available",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "No quote available",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -649,32 +878,33 @@ fun SearchResultsSection(
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         LazyColumn(
             modifier = Modifier.heightIn(max = 200.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(searchResults) { quote ->
-                Card(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    tonalElevation = 1.dp
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp)
+                        modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
                             "\"${quote.text}\"",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "- ${quote.author}",
+                            "— ${quote.author}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.align(Alignment.End)
                         )
                     }
@@ -694,7 +924,7 @@ fun FavoriteQuotesSection(favoriteQuotes: List<Quote>) {
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (favoriteQuotes.isNotEmpty()) {
             LazyColumn(
@@ -702,25 +932,26 @@ fun FavoriteQuotesSection(favoriteQuotes: List<Quote>) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(favoriteQuotes) { quote ->
-                    Card(
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 1.dp
                     ) {
                         Column(
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
                                 "\"${quote.text}\"",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "- ${quote.author}",
+                                "— ${quote.author}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.align(Alignment.End)
                             )
                         }
@@ -728,12 +959,27 @@ fun FavoriteQuotesSection(favoriteQuotes: List<Quote>) {
                 }
             }
         } else {
-            Text(
-                "No favorite quotes yet",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "No favorite quotes yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
@@ -748,27 +994,42 @@ fun ReflectionSection(
     hasReflectedToday: Boolean,
     isLoading: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(24.dp)
         ) {
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Daily Reflection 🤔",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Rounded.Lightbulb,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Daily Reflection",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
                 IconButton(
                     onClick = { homeViewModel.toggleReflectionHistory() },
@@ -776,14 +1037,14 @@ fun ReflectionSection(
                     enabled = !isLoading
                 ) {
                     Icon(
-                        Icons.Default.History,
+                        Icons.Rounded.History,
                         contentDescription = "Reflection history",
                         tint = if (showHistory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (showHistory) {
                 ReflectionHistorySection(reflectionHistory = reflectionHistory)
@@ -809,19 +1070,22 @@ fun CurrentReflectionSection(
     isLoading: Boolean
 ) {
     Column {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        // Question Card
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 2.dp,
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(20.dp)
             ) {
-                // Display today's date
                 Text(
-                    "Today's Reflection - ${getFormattedDate()}",
+                    "Today's Question",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
@@ -829,24 +1093,17 @@ fun CurrentReflectionSection(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Today's Question:",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    dailyQuestion.ifEmpty { "Loading today's question..." },
+                    dailyQuestion.ifEmpty { "What are you grateful for today?" },
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Answer Input
         OutlinedTextField(
             value = reflectionAnswer,
             onValueChange = { homeViewModel.updateReflectionAnswer(it) },
@@ -860,45 +1117,55 @@ fun CurrentReflectionSection(
             enabled = !isLoading && !hasReflectedToday,
             placeholder = {
                 if (hasReflectedToday) {
-                    Text("You've already reflected today. Come back tomorrow for a new question!")
+                    Text("You've already reflected today. Come back tomorrow! ✨")
                 } else {
-                    Text("Write your thoughts here...")
+                    Text("Share your thoughts and reflections...")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = { homeViewModel.saveReflection() },
+        // Action Buttons
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = reflectionAnswer.isNotBlank() && !isLoading && !hasReflectedToday,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(if (hasReflectedToday) "Already Reflected Today" else "Save Reflection")
-        }
+            Button(
+                onClick = { homeViewModel.saveReflection() },
+                modifier = Modifier.weight(1f),
+                enabled = reflectionAnswer.isNotBlank() && !isLoading && !hasReflectedToday,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (hasReflectedToday) "Already Saved" else "Save Reflection")
+            }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                if (!hasReflectedToday) {
-                    homeViewModel.loadDailyReflectionQuestion()
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            ),
-            enabled = !isLoading && !hasReflectedToday
-        ) {
-            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("New Question")
+//            Button(
+//                onClick = {
+//                    if (!hasReflectedToday) {
+//                        homeViewModel.loadDailyReflectionQuestion()
+//                    }
+//                },
+//                modifier = Modifier.weight(1f),
+//                shape = RoundedCornerShape(12.dp),
+//                colors = ButtonDefaults.buttonColors(
+//                    containerColor = MaterialTheme.colorScheme.secondary
+//                ),
+//                enabled = !isLoading && !hasReflectedToday
+//            ) {
+//                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+//                Spacer(modifier = Modifier.width(8.dp))
+//                Text("New Question")
+//            }
         }
     }
 }
@@ -913,7 +1180,7 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (reflectionHistory.isNotEmpty()) {
             LazyColumn(
@@ -921,15 +1188,14 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(reflectionHistory) { reflection ->
-                    Card(
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 1.dp
                     ) {
                         Column(
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
                                 reflection.date,
@@ -937,7 +1203,7 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
                                 reflection.question,
@@ -946,30 +1212,45 @@ fun ReflectionHistorySection(reflectionHistory: List<edu.bluejack25_1.synwc.data
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
                                 reflection.answer,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 20.sp
                             )
                         }
                     }
                 }
             }
         } else {
-            Text(
-                "No reflection history yet",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Outlined.History,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "No reflection history yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
 
-// Add this helper function to the HomeScreen.kt file:
 private fun getFormattedDate(): String {
-    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+    val sdf = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
     return sdf.format(java.util.Date())
 }
