@@ -204,7 +204,7 @@ fun ToDoScreen(
                     )
                 )
         ) {
-            // Decorative background elements
+
             Box(
                 modifier = Modifier
                     .size(280.dp)

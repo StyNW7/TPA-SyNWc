@@ -23,12 +23,11 @@ class SettingsViewModel(context: Context) : ViewModel() {
     private val userRepository = UserRepository()
     private val cloudinaryManager = CloudinaryManager(context)
 
-    // Theme state - use StateFlow for immediate updates
+    // Theme state
     private val _themeMode = MutableStateFlow("system")
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
     init {
-        // Load initial theme mode and observe changes
         viewModelScope.launch {
             preferences.themeMode.collect { mode ->
                 _themeMode.value = mode
@@ -37,7 +36,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
     }
 
-    // User profile state - use StateFlow to ensure fresh data
+    // User profile state
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
@@ -74,7 +73,6 @@ class SettingsViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             Log.d("SettingsViewModel", "Setting theme mode to: $theme")
             preferences.setThemeMode(theme)
-            // The theme will update automatically throughout the app via the observer
         }
     }
 
@@ -112,11 +110,10 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 val userId = userRepository.getCurrentUserId()
                 Log.d("SettingsViewModel", "Updating profile for user: $userId")
 
-                // Update to Firestore
                 val result = userRepository.updateUserProfile(userId, editedName, editedEmail)
 
                 result.onSuccess {
-                    // Update local state immediately
+
                     _userName.value = editedName
                     _userEmail.value = editedEmail
 
@@ -165,24 +162,22 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
             viewModelScope.launch {
                 try {
-                    // Try the InputStream method first (more reliable for content URIs)
+
                     val uploadResult = cloudinaryManager.uploadImageWithInputStream(uri)
 
                     uploadResult.onSuccess { imageUrl ->
                         Log.d("SettingsViewModel", "Image uploaded to Cloudinary: $imageUrl")
 
-                        // Ensure HTTPS URL
                         val secureImageUrl = ensureHttpsUrl(imageUrl)
                         Log.d("SettingsViewModel", "Using secure URL: $secureImageUrl")
 
-                        // Update Firestore with new image URL
                         val userId = userRepository.getCurrentUserId()
                         Log.d("SettingsViewModel", "Updating profile image for user: $userId")
 
                         val updateResult = userRepository.updateProfileImage(userId, secureImageUrl)
 
                         updateResult.onSuccess {
-                            // Update local state immediately
+
                             _profileImageUrl.value = secureImageUrl
 
                             // Also save to preferences for persistence
@@ -198,7 +193,6 @@ class SettingsViewModel(context: Context) : ViewModel() {
                             isLoading = false
                         }
                     }.onFailure { exception ->
-                        // Fallback: Try the file method if InputStream fails
                         Log.w("SettingsViewModel", "InputStream method failed, trying file method: ${exception.message}")
                         tryFileUploadMethod(uri)
                     }
@@ -228,10 +222,9 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 val updateResult = userRepository.updateProfileImage(userId, secureImageUrl)
 
                 updateResult.onSuccess {
-                    // Update local state immediately
+
                     _profileImageUrl.value = secureImageUrl
 
-                    // Also save to preferences for persistence
                     preferences.setProfileImageUrl(secureImageUrl)
 
                     showImagePicker = false
@@ -270,14 +263,12 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 val result = userRepository.getUser(userId)
 
                 result.onSuccess { user ->
-                    // Update local state with fresh data from Firestore
+
                     _userName.value = user.name
                     _userEmail.value = user.email
 
-                    // Use the profile image from Firestore, or empty string if null/not set
                     _profileImageUrl.value = user.profileImageUrl ?: ""
 
-                    // Update local preferences with Firestore data
                     preferences.setUserName(user.name)
                     preferences.setUserEmail(user.email)
                     user.profileImageUrl?.let {

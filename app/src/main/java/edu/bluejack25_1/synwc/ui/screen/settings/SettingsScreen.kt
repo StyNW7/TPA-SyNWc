@@ -433,7 +433,8 @@ fun ProfileImage(
                     color = MaterialTheme.colorScheme.primary
                 )
             } else if (profileImageUrl.isNotEmpty() && !imageLoadError) {
-                // Show profile image with proper caching
+
+                // Show profile image preview
                 Image(
                     painter = rememberAsyncImagePainter(
                         model = profileImageUrl,
@@ -477,7 +478,7 @@ fun ProfileImage(
                     )
                 }
             } else {
-                // Show default icon
+
                 Icon(
                     Icons.Default.AccountCircle,
                     contentDescription = "Default profile picture",
@@ -485,7 +486,7 @@ fun ProfileImage(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
 
-                // Edit icon overlay for default state
+
                 Box(
                     modifier = Modifier
                         .size(34.dp)

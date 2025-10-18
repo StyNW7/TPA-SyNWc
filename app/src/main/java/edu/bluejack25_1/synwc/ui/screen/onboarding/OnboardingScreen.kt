@@ -145,7 +145,7 @@ fun OnboardingScreen(
                 }
             }
 
-            // Enhanced Bottom Card with glassmorphism effect
+            // Bottom Card
             Surface(
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -248,7 +248,7 @@ fun OnboardingScreen(
                         Spacer(modifier = Modifier.height(32.dp))
 
                         if (isLastPage) {
-                            // Single Get Started button for last page
+
                             Button(
                                 onClick = {
                                     onGetStartedClick()
@@ -281,18 +281,17 @@ fun OnboardingScreen(
                                 )
                             }
                         } else {
-                            // Navigation Buttons for non-last pages
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Skip button with modern styling
+
                                 TextButton(
                                     onClick = {
                                         coroutineScope.launch {
                                             viewModel.skipToEnd()
-                                            // The LaunchedEffect above will handle the pager animation
                                         }
                                     },
                                     modifier = Modifier.padding(start = 8.dp)
@@ -311,7 +310,6 @@ fun OnboardingScreen(
                                     onClick = {
                                         coroutineScope.launch {
                                             viewModel.nextPage()
-                                            // The LaunchedEffect above will handle the pager animation
                                         }
                                     },
                                     shape = CircleShape,

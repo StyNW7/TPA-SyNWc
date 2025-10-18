@@ -83,6 +83,7 @@ class HomeViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             try {
+
                 // Load all data in parallel
                 val quoteJob = launch { loadDailyQuote() }
                 val reflectionJob = launch {
@@ -110,14 +111,13 @@ class HomeViewModel : ViewModel() {
     private suspend fun checkAndUpdateDailyQuestion() {
         val currentDate = getCurrentDate()
 
-        // Check if we need to update the question (new day)
         if (lastQuestionDate != currentDate) {
             loadDailyReflectionQuestion()
             lastQuestionDate = currentDate
         } else if (dailyQuestion.isEmpty()) {
-            // If no question loaded yet, load it
             loadDailyReflectionQuestion()
         }
+
     }
 
     // User Functions
@@ -146,9 +146,7 @@ class HomeViewModel : ViewModel() {
     fun updateUserStreaks() {
         viewModelScope.launch {
             try {
-                // Update reflection streak when user reflects
                 streakRepository.updateReflectionStreak()
-                // Reload user data to get updated streaks
                 loadCurrentUser()
             } catch (e: Exception) {
                 errorMessage = "Failed to update streaks: ${e.message}"

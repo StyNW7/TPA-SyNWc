@@ -118,10 +118,8 @@ class NoteViewModel : ViewModel() {
                 result.onSuccess { noteId ->
                     println("DEBUG: Successfully added note with ID: $noteId")
 
-                    // Update streak (with error handling to prevent crash)
                     updateTodoStreak(userId)
 
-                    // Refresh the list to show the new note
                     refreshNotes()
                     resetForm()
                     showAddEditDialog = false
@@ -168,7 +166,6 @@ class NoteViewModel : ViewModel() {
                     val result = noteRepository.updateNote(updatedNote)
                     result.onSuccess {
                         println("DEBUG: Successfully updated note")
-                        // Refresh the list
                         refreshNotes()
                         resetForm()
                         showAddEditDialog = false
@@ -205,7 +202,6 @@ class NoteViewModel : ViewModel() {
                 result.onSuccess {
                     println("DEBUG: Successfully deleted note")
                     errorMessage = null
-                    // Refresh the list after deletion
                     refreshNotes()
                 }.onFailure { exception ->
                     val error = "Failed to delete note: ${exception.message}"
@@ -234,7 +230,6 @@ class NoteViewModel : ViewModel() {
                 result.onSuccess {
                     println("DEBUG: Successfully toggled note status")
                     errorMessage = null
-                    // Refresh the list to show updated status
                     refreshNotes()
                 }.onFailure { exception ->
                     val error = "Failed to update note status: ${exception.message}"
@@ -249,26 +244,21 @@ class NoteViewModel : ViewModel() {
         }
     }
 
-    // New function to refresh notes
     private fun refreshNotes() {
         if (currentUserId.isNotBlank()) {
             loadNotes(currentUserId)
         }
     }
 
-    // FIXED: Add proper error handling for streak update
     private suspend fun updateTodoStreak(userId: String) {
         try {
             val result = streakRepository.updateTodoStreak()
             result.onSuccess {
                 println("DEBUG: Successfully updated todo streak")
             }.onFailure { exception ->
-                // Don't crash the app if streak update fails, just log it
                 println("DEBUG: Failed to update todo streak: ${exception.message}")
-                // You can optionally show a non-blocking message to the user
             }
         } catch (e: Exception) {
-            // Catch any unexpected exceptions to prevent crash
             println("DEBUG: Exception updating todo streak: ${e.message}")
         }
     }

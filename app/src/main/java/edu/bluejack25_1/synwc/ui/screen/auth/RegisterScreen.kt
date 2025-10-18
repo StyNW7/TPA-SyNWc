@@ -511,9 +511,98 @@ fun RegisterScreen(
 }
 
 // Email validation function
+//private fun isValidEmail(email: String): Boolean {
+//    val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+//    return emailRegex.matches(email)
+//}
+
 private fun isValidEmail(email: String): Boolean {
-    val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
-    return emailRegex.matches(email)
+    if (email.isBlank()) {
+        return false
+    }
+
+    // Check if email contains exactly one @ symbol
+    val atSymbolCount = email.count { it == '@' }
+    if (atSymbolCount != 1) {
+        return false
+    }
+
+    // Split email into local part and domain part
+    val parts = email.split("@")
+    if (parts.size != 2) {
+        return false
+    }
+
+    val localPart = parts[0]
+    val domainPart = parts[1]
+
+    // Validate local part (before @)
+    if (localPart.isBlank()) {
+        return false
+    }
+
+    // Check if local part contains only allowed characters
+    val allowedLocalChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_.-"
+    if (!localPart.all { it in allowedLocalChars }) {
+        return false
+    }
+
+    // Check if local part doesn't start or end with dot
+    if (localPart.startsWith('.') || localPart.endsWith('.')) {
+        return false
+    }
+
+    // Validate domain part (after @)
+    if (domainPart.isBlank()) {
+        return false
+    }
+
+    // Check if domain contains a dot
+    if (!domainPart.contains('.')) {
+        return false
+    }
+
+    // Split domain into domain name and TLD
+    val domainParts = domainPart.split('.')
+    if (domainParts.size < 2) {
+        return false
+    }
+
+    val domainName = domainParts[0]
+    val tld = domainParts.last()
+
+    // Validate domain name
+    if (domainName.isBlank()) {
+        return false
+    }
+
+    // Check if domain name contains only allowed characters
+    val allowedDomainChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-"
+    if (!domainName.all { it in allowedDomainChars }) {
+        return false
+    }
+
+    // Check if domain name doesn't start or end with hyphen
+    if (domainName.startsWith('-') || domainName.endsWith('-')) {
+        return false
+    }
+
+    // Validate TLD (top-level domain)
+    if (tld.isBlank()) {
+        return false
+    }
+
+    // TLD should be at least 2 characters
+    if (tld.length < 2) {
+        return false
+    }
+
+    // TLD should contain only letters
+    if (!tld.all { it in 'a'..'z' || it in 'A'..'Z' }) {
+        return false
+    }
+
+    return true
 }
 
 // Form validation function

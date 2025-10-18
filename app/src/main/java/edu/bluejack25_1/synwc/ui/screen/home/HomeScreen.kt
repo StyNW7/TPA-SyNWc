@@ -47,6 +47,7 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
     context: Context = LocalContext.current
 ) {
+
     val currentUser by userViewModel.currentUser.collectAsState()
     val userLoggedIn by authViewModel.userLoggedIn.collectAsState()
 
@@ -995,7 +996,7 @@ fun ReflectionSection(
     hasReflectedToday: Boolean,
     isLoading: Boolean
 ) {
-    val errorMessage = homeViewModel.errorMessage // Get error message
+    val errorMessage = homeViewModel.errorMessage
 
     Surface(
         modifier = Modifier
@@ -1058,7 +1059,7 @@ fun ReflectionSection(
                     homeViewModel = homeViewModel,
                     hasReflectedToday = hasReflectedToday,
                     isLoading = isLoading,
-                    errorMessage = errorMessage // Pass error message here
+                    errorMessage = errorMessage
                 )
             }
         }
@@ -1072,10 +1073,10 @@ fun CurrentReflectionSection(
     homeViewModel: HomeViewModel,
     hasReflectedToday: Boolean,
     isLoading: Boolean,
-    errorMessage: String? // Add this parameter
+    errorMessage: String?
 ) {
     Column {
-        // Show error message if it's related to reflection
+
         if (errorMessage?.contains("reflection") == true) {
             Surface(
                 modifier = Modifier

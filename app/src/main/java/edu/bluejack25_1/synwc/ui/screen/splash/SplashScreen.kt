@@ -86,24 +86,17 @@ fun SplashScreen(
             )
         }
 
-        // Check authentication state while showing splash
         authViewModel.checkAuthState()
 
-        // Wait for minimum display time (2 seconds)
         delay(2000)
 
         // Navigate based on authentication state
         if (authViewModel.userLoggedIn.value) {
-            // User is logged in, go to home
             navController.navigate("home") {
-                // Remove splash screen from back stack so user can't go back
                 popUpTo("splash") { inclusive = true }
             }
         } else {
-            // User is not logged in, go to onboarding or login
-            // You can choose between "onboarding" or "login" here
             navController.navigate("onboarding") {
-                // Remove splash screen from back stack so user can't go back
                 popUpTo("splash") { inclusive = true }
             }
         }
@@ -123,7 +116,7 @@ fun SplashScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Decorative background circles
+
         Box(
             modifier = Modifier
                 .size(300.dp)
@@ -160,7 +153,6 @@ fun SplashScreen(
             Box(
                 contentAlignment = Alignment.Center
             ) {
-                // Glow effect behind logo
                 Box(
                     modifier = Modifier
                         .size(140.dp)
@@ -178,7 +170,6 @@ fun SplashScreen(
                         .blur(30.dp)
                 )
 
-                // App Logo/Icon with animation
                 Image(
                     painter = painterResource(id = R.drawable.ic_synwc_logo),
                     contentDescription = "App Logo",
@@ -191,7 +182,6 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // App Name with modern styling
             Text(
                 text = "SyNWc",
                 style = MaterialTheme.typography.displayLarge,
@@ -205,7 +195,6 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Decorative divider
             Box(
                 modifier = Modifier
                     .size(width = 80.dp, height = 4.dp)
@@ -223,7 +212,6 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // App Tagline with refined typography
             Text(
                 text = "SyNWc Your Notes",
                 style = MaterialTheme.typography.titleLarge,
@@ -263,4 +251,5 @@ fun SplashScreen(
             )
         }
     }
+
 }

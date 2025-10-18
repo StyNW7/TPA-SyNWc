@@ -32,10 +32,9 @@ class AuthViewModel : ViewModel() {
     val userLoggedIn = _userLoggedIn.asStateFlow()
 
     init {
-        // Start periodic streak checking when ViewModel is created
+
         streakService.startPeriodicStreakCheck()
 
-        // Check streaks immediately if user is already logged in
         if (_userLoggedIn.value) {
             checkStreaksOnAppStart()
         }
@@ -66,12 +65,14 @@ class AuthViewModel : ViewModel() {
     }
 
     fun register(username: String, email: String, password: String, confirmPassword: String) {
+
         viewModelScope.launch {
             _loading.value = true
             _errorMessage.value = null
             _success.value = false
 
             try {
+
                 // Basic validation
                 if (username.length < 3) {
                     _errorMessage.value = "Username must be at least 3 characters"
@@ -115,7 +116,6 @@ class AuthViewModel : ViewModel() {
                     email = email.trim().lowercase()
                 )
 
-                // Create user document with validation
                 val createResult = userRepository.createUser(user)
 
                 createResult.onSuccess {
@@ -123,10 +123,8 @@ class AuthViewModel : ViewModel() {
                     _userLoggedIn.value = true
                     _loading.value = false
 
-                    // For new users, check streaks (will initialize them properly)
                     checkStreaksOnAppStart()
                 }.onFailure { exception ->
-                    // Delete the auth user if user creation fails
                     authResult.user?.delete()?.await()
                     _errorMessage.value = exception.message ?: "Registration failed"
                     _loading.value = false
@@ -170,7 +168,6 @@ class AuthViewModel : ViewModel() {
             try {
                 streakService.checkStreaksOnAppStart()
             } catch (e: Exception) {
-                // Log the error but don't show to user as this is a background operation
                 println("Streak check failed: ${e.message}")
             }
         }
@@ -224,7 +221,6 @@ class AuthViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Stop streak checking when ViewModel is cleared
         streakService.stopPeriodicStreakCheck()
     }
 }
