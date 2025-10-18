@@ -120,7 +120,7 @@ fun ToDoScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "SyNWc - To Do",
+                        "To Do",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
