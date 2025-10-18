@@ -145,10 +145,9 @@ class ReflectionRepository {
                 .set(questionData)
                 .await()
 
-            // Clean up old questions (keep only last 30 days)
             cleanupOldQuestions(userId)
         } catch (e: Exception) {
-            // If saving fails, we'll just generate a new question next time
+
         }
     }
 
@@ -171,7 +170,7 @@ class ReflectionRepository {
                 }
             }
         } catch (e: Exception) {
-            // Ignore cleanup errors
+
         }
     }
 
@@ -195,7 +194,6 @@ class ReflectionRepository {
                 .set(reflection.toMap())
                 .await()
 
-            // Update reflection streak - use the new function
             streakRepository.updateReflectionStreak()
 
             Result.success(reflectionId)

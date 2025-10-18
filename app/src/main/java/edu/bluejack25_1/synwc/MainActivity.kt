@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            // The theme will now observe changes automatically
+            // The theme will observe changes automatically
             SyNWcTheme {
                 Surface(
                     color = MaterialTheme.colorScheme.background

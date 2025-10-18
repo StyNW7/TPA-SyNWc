@@ -110,14 +110,14 @@ fun QuoteSeederScreen(navController: NavController) {
                 onClick = {
                     coroutineScope.launch {
                         isLoading = true
-                        message = "🔄 Seeding quotes..."
+                        message = "Seeding quotes..."
                         val success = quoteSeeder.seedQuotes()
                         isLoading = false
                         if (success) {
                             message = "✅ Quotes seeded successfully! Check Logcat for details."
                             existingQuotesCount = quoteSeeder.checkExistingQuotes()
                         } else {
-                            message = "❌ Failed to seed quotes. Check Logcat for errors."
+                            message = "Failed to seed quotes. Check Logcat for errors."
                         }
                     }
                 },
@@ -144,10 +144,10 @@ fun QuoteSeederScreen(navController: NavController) {
                 onClick = {
                     coroutineScope.launch {
                         isLoading = true
-                        message = "🔄 Checking existing quotes..."
+                        message = "Checking existing quotes..."
                         existingQuotesCount = quoteSeeder.checkExistingQuotes()
                         isLoading = false
-                        message = "🔍 Checked existing quotes"
+                        message = "Checked existing quotes"
                     }
                 },
                 modifier = Modifier
@@ -176,14 +176,14 @@ fun QuoteSeederScreen(navController: NavController) {
                 onClick = {
                     coroutineScope.launch {
                         isLoading = true
-                        message = "🔄 Clearing quotes..."
+                        message = "Clearing quotes..."
                         val success = quoteSeeder.clearQuotes()
                         isLoading = false
                         if (success) {
                             message = "✅ All quotes cleared from database!"
                             existingQuotesCount = 0
                         } else {
-                            message = "❌ Failed to clear quotes"
+                            message = "Failed to clear quotes"
                         }
                     }
                 },

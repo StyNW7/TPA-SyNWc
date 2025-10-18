@@ -208,7 +208,6 @@ fun BeautifulBottomNavigationBar(navController: NavController) {
     }
 }
 
-// Alternative Modern Style - Floating Bottom Navigation Bar
 @Composable
 fun FloatingBottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()

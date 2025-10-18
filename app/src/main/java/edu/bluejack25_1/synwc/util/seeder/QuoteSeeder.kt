@@ -68,13 +68,13 @@ class QuoteSeeder {
 
         // First, let's check if we can read from Firestore
         try {
-            println("🔍 Checking Firestore connection...")
+            println("Checking Firestore connection...")
             val testDoc = db.collection("test").document("connection_test")
             testDoc.set(mapOf("test" to true)).await()
             testDoc.delete().await()
-            println("✅ Firestore connection successful")
+            println("Firestore connection successful")
         } catch (e: Exception) {
-            println("❌ Firestore connection failed: ${e.message}")
+            println("Firestore connection failed: ${e.message}")
             return false
         }
 
@@ -87,29 +87,29 @@ class QuoteSeeder {
                     .set(quoteData)
                     .await()
                 successCount++
-                println("✅ Successfully added quote $documentId: ${quoteData["text"]?.take(50)}...")
+                println("Successfully added quote $documentId: ${quoteData["text"]?.take(50)}...")
             } catch (e: Exception) {
                 errorCount++
-                println("❌ Error adding quote ${index + 1}: ${e.message}")
+                println("Error adding quote ${index + 1}: ${e.message}")
                 e.printStackTrace()
             }
         }
 
-        println("\n🎉 Seeding completed!")
-        println("✅ Successfully added: $successCount quotes")
-        println("❌ Failed to add: $errorCount quotes")
+        println("\nSeeding completed!")
+        println("Successfully added: $successCount quotes")
+        println("Failed to add: $errorCount quotes")
 
         // Verify by reading back
         if (successCount > 0) {
             try {
-                println("\n🔍 Verifying quotes in database...")
+                println("\nVerifying quotes in database...")
                 val snapshot = db.collection("quotes").get().await()
-                println("📊 Found ${snapshot.documents.size} quotes in database")
+                println("Found ${snapshot.documents.size} quotes in database")
                 snapshot.documents.forEach { doc ->
                     println("   - ${doc.id}: ${doc.getString("text")?.take(30)}...")
                 }
             } catch (e: Exception) {
-                println("❌ Error verifying quotes: ${e.message}")
+                println("Error verifying quotes: ${e.message}")
             }
         }
 
@@ -120,13 +120,13 @@ class QuoteSeeder {
         return try {
             val snapshot = db.collection("quotes").get().await()
             val count = snapshot.documents.size
-            println("📊 Found $count existing quotes in database")
+            println("Found $count existing quotes in database")
             snapshot.documents.forEach { doc ->
                 println("   - ${doc.id}: ${doc.getString("text")?.take(30)}...")
             }
             count
         } catch (e: Exception) {
-            println("❌ Error checking existing quotes: ${e.message}")
+            println("Error checking existing quotes: ${e.message}")
             -1
         }
     }
@@ -141,10 +141,10 @@ class QuoteSeeder {
             }
 
             batch.commit().await()
-            println("🗑️ All quotes cleared from database")
+            println("🗑All quotes cleared from database")
             true
         } catch (e: Exception) {
-            println("❌ Error clearing quotes: ${e.message}")
+            println("Error clearing quotes: ${e.message}")
             false
         }
     }

@@ -8,6 +8,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class NoteRepository {
+
     private val db = FirebaseFirestore.getInstance()
     private val notesCollection = db.collection("notes")
     private val auth = Firebase.auth

@@ -9,6 +9,7 @@ import kotlinx.coroutines.tasks.await
 import java.lang.Exception
 
 class UserRepository {
+
     private val db: FirebaseFirestore = Firebase.firestore
     private val auth = Firebase.auth
 
@@ -66,24 +67,22 @@ class UserRepository {
     // Create user with validation
     suspend fun createUserWithValidation(user: User): Result<Unit> {
         return try {
-            // Validate email uniqueness
+
             if (isEmailExists(user.email)) {
                 return Result.failure(Exception("Email already exists"))
             }
 
-            // Validate username uniqueness
             if (isUsernameExists(user.name)) {
                 return Result.failure(Exception("Username already exists"))
             }
 
-            // Initialize with proper streak data
             val newUser = user.copy(
                 loginStreak = 1,
                 todoStreak = 0,
                 reflectionStreak = 0,
                 lastLoginDate = User.getCurrentDate(),
-                lastTodoDate = "", // Empty means no todo activity yet
-                lastReflectionDate = "" // Empty means no reflection activity yet
+                lastTodoDate = "",
+                lastReflectionDate = ""
             )
 
             db.collection(USERS_COLLECTION)
@@ -98,14 +97,14 @@ class UserRepository {
 
     suspend fun createUser(user: User): Result<Unit> {
         return try {
-            // Initialize with proper streak data
+
             val newUser = user.copy(
                 loginStreak = 1,
                 todoStreak = 0,
                 reflectionStreak = 0,
                 lastLoginDate = User.getCurrentDate(),
-                lastTodoDate = "", // Empty means no todo activity yet
-                lastReflectionDate = "" // Empty means no reflection activity yet
+                lastTodoDate = "",
+                lastReflectionDate = ""
             )
 
             db.collection(USERS_COLLECTION)

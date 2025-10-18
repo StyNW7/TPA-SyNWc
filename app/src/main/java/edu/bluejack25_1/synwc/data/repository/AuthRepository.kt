@@ -9,6 +9,7 @@ import kotlinx.coroutines.tasks.await
 import java.lang.Exception
 
 class AuthRepository {
+
     private val auth: FirebaseAuth = Firebase.auth
     private val userRepository = UserRepository()
     private val streakRepository = StreakRepository()
@@ -28,12 +29,10 @@ class AuthRepository {
 
     suspend fun loginWithEmailOrUsername(identifier: String, password: String): Result<Unit> {
         return try {
-            // First, check if the identifier is an email
+
             if (isValidEmail(identifier)) {
-                // If it's a valid email format, try to login directly
                 return loginUser(identifier, password)
             } else {
-                // If it's not an email, assume it's a username and find the associated email
                 val userEmail = userRepository.findEmailByUsername(identifier)
                 if (userEmail != null) {
                     return loginUser(userEmail, password)
@@ -48,6 +47,7 @@ class AuthRepository {
 
     suspend fun registerUser(username: String, email: String, password: String): Result<Unit> {
         return try {
+
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
 
             // Update user profile with username in Firebase Auth
@@ -57,7 +57,6 @@ class AuthRepository {
                     .build()
                 user.updateProfile(profileUpdates).await()
 
-                // Create user in Firestore with proper streak initialization
                 val newUser = User.createNewUser(
                     id = user.uid,
                     name = username,
@@ -66,11 +65,12 @@ class AuthRepository {
 
                 val createUserResult = userRepository.createUser(newUser)
                 if (createUserResult.isFailure) {
-                    // If Firestore creation fails, delete the auth user to maintain consistency
                     user.delete().await()
                     return Result.failure(createUserResult.exceptionOrNull()!!)
                 }
+
             }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -85,4 +85,5 @@ class AuthRepository {
         val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
         return emailRegex.matches(email)
     }
+
 }

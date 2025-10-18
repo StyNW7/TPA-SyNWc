@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class StreakRepository {
+
     private val db: FirebaseFirestore = Firebase.firestore
     private val auth = Firebase.auth
     private val userRepository = UserRepository()

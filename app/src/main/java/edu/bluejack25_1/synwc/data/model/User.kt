@@ -13,9 +13,9 @@ data class User(
     val loginStreak: Int = 0,
     val todoStreak: Int = 0,
     val reflectionStreak: Int = 0,
-    val lastLoginDate: String = "", // Start empty for new users
-    val lastTodoDate: String = "", // Start empty until first todo completion
-    val lastReflectionDate: String = "" // Start empty until first reflection
+    val lastLoginDate: String = "",
+    val lastTodoDate: String = "",
+    val lastReflectionDate: String = ""
 ) {
     companion object {
         fun getCurrentDate(): String {
@@ -31,12 +31,12 @@ data class User(
                 name = name,
                 email = email,
                 joinDate = System.currentTimeMillis(),
-                loginStreak = 1, // Start with 1 for registration day
-                todoStreak = 0, // Start at 0, no todos completed yet
-                reflectionStreak = 0, // Start at 0, no reflections yet
-                lastLoginDate = currentDate, // Set to current date for login
-                lastTodoDate = "", // Empty until first todo completion
-                lastReflectionDate = "" // Empty until first reflection
+                loginStreak = 1,
+                todoStreak = 0,
+                reflectionStreak = 0,
+                lastLoginDate = currentDate,
+                lastTodoDate = "",
+                lastReflectionDate = ""
             )
         }
     }
