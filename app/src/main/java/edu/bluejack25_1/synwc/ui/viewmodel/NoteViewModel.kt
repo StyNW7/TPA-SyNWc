@@ -259,7 +259,7 @@ class NoteViewModel : ViewModel() {
     // FIXED: Add proper error handling for streak update
     private suspend fun updateTodoStreak(userId: String) {
         try {
-            val result = streakRepository.updateTodoStreak(userId)
+            val result = streakRepository.updateTodoStreak()
             result.onSuccess {
                 println("DEBUG: Successfully updated todo streak")
             }.onFailure { exception ->

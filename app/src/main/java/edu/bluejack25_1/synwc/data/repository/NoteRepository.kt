@@ -88,7 +88,7 @@ class NoteRepository {
             // Update todo streak if note is being marked as completed
             if (note.isCompleted) {
                 val userId = getCurrentUserId()
-                streakRepository.updateTodoStreak(userId)
+                streakRepository.updateTodoStreak()
             }
 
             Result.success(Unit)
@@ -127,7 +127,7 @@ class NoteRepository {
             // Update todo streak if note is being marked as completed
             if (isCompleted) {
                 val userId = getCurrentUserId()
-                streakRepository.updateTodoStreak(userId)
+                streakRepository.updateTodoStreak()
             }
 
             Result.success(Unit)

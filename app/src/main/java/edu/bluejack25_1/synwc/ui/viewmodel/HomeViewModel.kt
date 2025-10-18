@@ -7,15 +7,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.bluejack25_1.synwc.data.model.Quote
 import edu.bluejack25_1.synwc.data.model.Reflection
+import edu.bluejack25_1.synwc.data.model.User
 import edu.bluejack25_1.synwc.data.repository.QuoteRepository
+import edu.bluejack25_1.synwc.data.repository.StreakRepository
 import edu.bluejack25_1.synwc.data.repository.ReflectionRepository
+import edu.bluejack25_1.synwc.data.repository.UserRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 class HomeViewModel : ViewModel() {
+
     private val quoteRepository = QuoteRepository()
     private val reflectionRepository = ReflectionRepository()
+    private val streakRepository = StreakRepository()
+    private val userRepository = UserRepository()
 
     // Quote States
     var currentQuote by mutableStateOf<Quote?>(null)
@@ -52,6 +58,10 @@ class HomeViewModel : ViewModel() {
     var questionHistory by mutableStateOf<List<Pair<String, String>>>(emptyList())
         private set
 
+    // User State
+    var currentUser by mutableStateOf<User?>(null)
+        private set
+
     // Common States
     var isLoading by mutableStateOf(false)
         private set
@@ -73,7 +83,7 @@ class HomeViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             try {
-                // Load quotes and reflection data in parallel
+                // Load all data in parallel
                 val quoteJob = launch { loadDailyQuote() }
                 val reflectionJob = launch {
                     checkAndUpdateDailyQuestion()
@@ -81,11 +91,13 @@ class HomeViewModel : ViewModel() {
                     loadReflectionHistory()
                 }
                 val favoritesJob = launch { loadFavoriteQuotes() }
+                val userJob = launch { loadCurrentUser() }
 
                 // Wait for all to complete
                 quoteJob.join()
                 reflectionJob.join()
                 favoritesJob.join()
+                userJob.join()
 
             } catch (e: Exception) {
                 errorMessage = "Failed to load initial data: ${e.message}"
@@ -105,6 +117,42 @@ class HomeViewModel : ViewModel() {
         } else if (dailyQuestion.isEmpty()) {
             // If no question loaded yet, load it
             loadDailyReflectionQuestion()
+        }
+    }
+
+    // User Functions
+    fun loadCurrentUser() {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                val currentUserId = userRepository.getCurrentUserId()
+                val result = userRepository.getUser(currentUserId)
+                result.onSuccess { user ->
+                    currentUser = user
+                }.onFailure { exception ->
+                    errorMessage = "Failed to load user data: ${exception.message}"
+                    currentUser = null
+                }
+            } catch (e: Exception) {
+                errorMessage = "Exception loading user data: ${e.message}"
+                currentUser = null
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun updateUserStreaks() {
+        viewModelScope.launch {
+            try {
+                // Update reflection streak when user reflects
+                streakRepository.updateReflectionStreak()
+                // Reload user data to get updated streaks
+                loadCurrentUser()
+            } catch (e: Exception) {
+                errorMessage = "Failed to update streaks: ${e.message}"
+            }
         }
     }
 
@@ -270,6 +318,9 @@ class HomeViewModel : ViewModel() {
                     reflectionAnswer = "" // Clear answer after saving
                     hasReflectedToday = true
                     loadReflectionHistory() // Refresh history
+
+                    // Update reflection streak after saving reflection
+                    updateUserStreaks()
                 }.onFailure { exception ->
                     errorMessage = "Failed to save reflection: ${exception.message}"
                 }
@@ -344,6 +395,30 @@ class HomeViewModel : ViewModel() {
         showReflectionHistory = !showReflectionHistory
         if (showReflectionHistory) {
             loadReflectionHistory()
+        }
+    }
+
+    // Streak Functions
+    fun checkAndResetStreaks() {
+        viewModelScope.launch {
+            try {
+                streakRepository.checkAndResetStreaks()
+                // Reload user data to get updated streaks
+                loadCurrentUser()
+            } catch (e: Exception) {
+                errorMessage = "Failed to check streaks: ${e.message}"
+            }
+        }
+    }
+
+    fun updateTodoStreak() {
+        viewModelScope.launch {
+            try {
+                streakRepository.updateTodoStreak()
+                loadCurrentUser()
+            } catch (e: Exception) {
+                errorMessage = "Failed to update todo streak: ${e.message}"
+            }
         }
     }
 

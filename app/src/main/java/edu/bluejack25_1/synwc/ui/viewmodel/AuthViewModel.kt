@@ -8,6 +8,7 @@ import edu.bluejack25_1.synwc.data.model.User
 import edu.bluejack25_1.synwc.data.repository.AuthRepository
 import edu.bluejack25_1.synwc.data.repository.StreakRepository
 import edu.bluejack25_1.synwc.data.repository.UserRepository
+import edu.bluejack25_1.synwc.domain.service.StreakService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -16,6 +17,7 @@ import kotlinx.coroutines.tasks.await
 class AuthViewModel : ViewModel() {
     private val repository = AuthRepository()
     private val streakRepository = StreakRepository()
+    private val streakService = StreakService()
 
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
@@ -28,6 +30,16 @@ class AuthViewModel : ViewModel() {
 
     private val _userLoggedIn = MutableStateFlow(repository.isUserLoggedIn())
     val userLoggedIn = _userLoggedIn.asStateFlow()
+
+    init {
+        // Start periodic streak checking when ViewModel is created
+        streakService.startPeriodicStreakCheck()
+
+        // Check streaks immediately if user is already logged in
+        if (_userLoggedIn.value) {
+            checkStreaksOnAppStart()
+        }
+    }
 
     fun login(identifier: String, password: String) {
         if (identifier.isBlank() || password.isBlank()) {
@@ -43,6 +55,10 @@ class AuthViewModel : ViewModel() {
             result.onSuccess {
                 _success.value = true
                 _userLoggedIn.value = true
+
+                // Update login streak and check other streaks on successful login
+                updateLoginStreak()
+                checkStreaksOnAppStart()
             }.onFailure {
                 _errorMessage.value = getFirebaseAuthErrorMessage(it)
             }
@@ -104,7 +120,11 @@ class AuthViewModel : ViewModel() {
 
                 createResult.onSuccess {
                     _success.value = true
+                    _userLoggedIn.value = true
                     _loading.value = false
+
+                    // For new users, check streaks (will initialize them properly)
+                    checkStreaksOnAppStart()
                 }.onFailure { exception ->
                     // Delete the auth user if user creation fails
                     authResult.user?.delete()?.await()
@@ -129,6 +149,33 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun updateReflectionStreak() {
+        viewModelScope.launch {
+            streakRepository.updateReflectionStreak()
+        }
+    }
+
+    fun updateTodoStreak() {
+        viewModelScope.launch {
+            streakRepository.updateTodoStreak()
+        }
+    }
+
+    suspend fun checkAndResetStreaks() {
+        streakRepository.checkAndResetStreaks()
+    }
+
+    fun checkStreaksOnAppStart() {
+        viewModelScope.launch {
+            try {
+                streakService.checkStreaksOnAppStart()
+            } catch (e: Exception) {
+                // Log the error but don't show to user as this is a background operation
+                println("Streak check failed: ${e.message}")
+            }
+        }
+    }
+
     fun logout(settingsViewModel: SettingsViewModel? = null) {
         viewModelScope.launch {
             try {
@@ -145,6 +192,11 @@ class AuthViewModel : ViewModel() {
 
     fun checkAuthState() {
         _userLoggedIn.value = repository.isUserLoggedIn()
+
+        // Check streaks when auth state is checked and user is logged in
+        if (_userLoggedIn.value) {
+            checkStreaksOnAppStart()
+        }
     }
 
     fun clearError() {
@@ -168,5 +220,11 @@ class AuthViewModel : ViewModel() {
             errorMessage.contains("No account found with this username") -> "No account found with this username."
             else -> "Authentication failed: ${exception.message}"
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Stop streak checking when ViewModel is cleared
+        streakService.stopPeriodicStreakCheck()
     }
 }

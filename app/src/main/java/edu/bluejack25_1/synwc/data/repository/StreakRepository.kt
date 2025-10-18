@@ -7,6 +7,7 @@ import com.google.firebase.Firebase
 import edu.bluejack25_1.synwc.data.model.User
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.tasks.await
 
 class StreakRepository {
 
@@ -82,7 +83,7 @@ class StreakRepository {
         }
     }
 
-    suspend fun updateTodoStreak(userId: String): Result<Unit> {
+    suspend fun updateTodoStreak(): Result<Unit> {
         return try {
             val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
             val currentDate = User.getCurrentDate()
@@ -164,21 +165,16 @@ class StreakRepository {
             val user = userResult.getOrNull()!!
             val updates = mutableMapOf<String, Any>()
 
-            // Check login streak reset (if last login was before yesterday)
-            if (user.lastLoginDate.isNotEmpty() && !isSameDay(user.lastLoginDate, currentDate) &&
-                !isConsecutiveDay(user.lastLoginDate, currentDate)) {
+            // Check if streaks need to be reset (missed more than 1 day)
+            if (shouldResetStreak(user.lastLoginDate, currentDate, user.loginStreak)) {
                 updates["loginStreak"] = 0
             }
 
-            // Check reflection streak reset
-            if (user.lastReflectionDate.isNotEmpty() && !isSameDay(user.lastReflectionDate, currentDate) &&
-                !isConsecutiveDay(user.lastReflectionDate, currentDate)) {
+            if (shouldResetStreak(user.lastReflectionDate, currentDate, user.reflectionStreak)) {
                 updates["reflectionStreak"] = 0
             }
 
-            // Check todo streak reset
-            if (user.lastTodoDate.isNotEmpty() && !isSameDay(user.lastTodoDate, currentDate) &&
-                !isConsecutiveDay(user.lastTodoDate, currentDate)) {
+            if (shouldResetStreak(user.lastTodoDate, currentDate, user.todoStreak)) {
                 updates["todoStreak"] = 0
             }
 
@@ -189,6 +185,31 @@ class StreakRepository {
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun shouldResetStreak(lastActivityDate: String, currentDate: String, currentStreak: Int): Boolean {
+        if (lastActivityDate.isEmpty() || currentStreak == 0) {
+            return false // No activity yet or already reset
+        }
+
+        // If it's not the same day and not consecutive, reset the streak
+        return !isSameDay(lastActivityDate, currentDate) && !isConsecutiveDay(lastActivityDate, currentDate)
+    }
+
+    // Helper function to check if a date is more than 1 day old
+    private fun isMoreThanOneDayOld(lastDate: String, currentDate: String): Boolean {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return try {
+            val last = sdf.parse(lastDate)
+            val current = sdf.parse(currentDate)
+
+            val diff = current.time - last.time
+            val daysDiff = diff / (1000 * 60 * 60 * 24)
+
+            daysDiff > 1
+        } catch (e: Exception) {
+            false
         }
     }
 }

@@ -97,6 +97,7 @@ fun HomeScreen(
         if (userLoggedIn) {
             userViewModel.loadCurrentUser()
             homeViewModel.refreshAllData()
+            homeViewModel.checkAndResetStreaks()
             authViewModel.updateLoginStreak()
         }
     }
@@ -994,6 +995,8 @@ fun ReflectionSection(
     hasReflectedToday: Boolean,
     isLoading: Boolean
 ) {
+    val errorMessage = homeViewModel.errorMessage // Get error message
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1054,7 +1057,8 @@ fun ReflectionSection(
                     reflectionAnswer = reflectionAnswer,
                     homeViewModel = homeViewModel,
                     hasReflectedToday = hasReflectedToday,
-                    isLoading = isLoading
+                    isLoading = isLoading,
+                    errorMessage = errorMessage // Pass error message here
                 )
             }
         }
@@ -1067,9 +1071,50 @@ fun CurrentReflectionSection(
     reflectionAnswer: String,
     homeViewModel: HomeViewModel,
     hasReflectedToday: Boolean,
-    isLoading: Boolean
+    isLoading: Boolean,
+    errorMessage: String? // Add this parameter
 ) {
     Column {
+        // Show error message if it's related to reflection
+        if (errorMessage?.contains("reflection") == true) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.errorContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Rounded.Warning,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { homeViewModel.clearError() },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = "Dismiss",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
+
         // Question Card
         Surface(
             modifier = Modifier
@@ -1103,30 +1148,42 @@ fun CurrentReflectionSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Answer Input
-        OutlinedTextField(
-            value = reflectionAnswer,
-            onValueChange = { homeViewModel.updateReflectionAnswer(it) },
-            label = { Text("Your reflection...") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = false,
-            maxLines = 4,
-            enabled = !isLoading && !hasReflectedToday,
-            placeholder = {
-                if (hasReflectedToday) {
-                    Text("You've already reflected today. Come back tomorrow! ✨")
-                } else {
-                    Text("Share your thoughts and reflections...")
-                }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        // Answer Input with character counter
+        Column {
+            OutlinedTextField(
+                value = reflectionAnswer,
+                onValueChange = { homeViewModel.updateReflectionAnswer(it) },
+                label = { Text("Your reflection...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = false,
+                maxLines = 4,
+                enabled = !isLoading && !hasReflectedToday,
+                placeholder = {
+                    if (hasReflectedToday) {
+                        Text("You've already reflected today. Come back tomorrow! ✨")
+                    } else {
+                        Text("Share your thoughts and reflections...")
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                ),
+                isError = errorMessage?.contains("reflection") == true
             )
-        )
+
+            // Character counter
+            Text(
+                text = "${reflectionAnswer.length}/10 characters",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (reflectionAnswer.length < 10) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.align(Alignment.End)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1148,24 +1205,6 @@ fun CurrentReflectionSection(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(if (hasReflectedToday) "Already Saved" else "Save Reflection")
             }
-
-//            Button(
-//                onClick = {
-//                    if (!hasReflectedToday) {
-//                        homeViewModel.loadDailyReflectionQuestion()
-//                    }
-//                },
-//                modifier = Modifier.weight(1f),
-//                shape = RoundedCornerShape(12.dp),
-//                colors = ButtonDefaults.buttonColors(
-//                    containerColor = MaterialTheme.colorScheme.secondary
-//                ),
-//                enabled = !isLoading && !hasReflectedToday
-//            ) {
-//                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-//                Spacer(modifier = Modifier.width(8.dp))
-//                Text("New Question")
-//            }
         }
     }
 }
