@@ -22,9 +22,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -104,7 +102,7 @@ fun BeautifulBottomNavigationBar(navController: NavController) {
 
                 // Offset animation for selected item (bounce up effect)
                 val offsetY by animateDpAsState(
-                    targetValue = if (selected) (-4).dp else 0.dp,
+                    targetValue = 0.dp,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
                         stiffness = Spring.StiffnessMedium
@@ -136,7 +134,7 @@ fun BeautifulBottomNavigationBar(navController: NavController) {
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
                                     .size(if (selected) 56.dp else 48.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(18.dp))
                                     .background(
                                         if (selected) {
                                             Brush.linearGradient(
@@ -154,6 +152,7 @@ fun BeautifulBottomNavigationBar(navController: NavController) {
                                             )
                                         }
                                     )
+                                    .padding(if (selected) 8.dp else 6.dp)
                             ) {
                                 Icon(
                                     imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
@@ -171,19 +170,6 @@ fun BeautifulBottomNavigationBar(navController: NavController) {
 
                             // Animated spacer
                             Spacer(modifier = Modifier.height(if (selected) 6.dp else 4.dp))
-
-                            // Label with animation
-                            Text(
-                                text = item.title,
-                                fontSize = if (selected) 12.sp else 11.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                },
-                                maxLines = 1
-                            )
 
                             // Active indicator dot
                             if (selected) {
@@ -296,10 +282,9 @@ fun FloatingNavItem(
             Color.Transparent
         }
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
@@ -311,16 +296,6 @@ fun FloatingNavItem(
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 }
             )
-
-            if (selected) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = item.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
         }
     }
 }

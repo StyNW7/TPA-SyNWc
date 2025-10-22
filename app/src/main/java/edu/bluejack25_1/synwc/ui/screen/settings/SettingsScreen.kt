@@ -326,7 +326,7 @@ fun ProfileCard(
                     onChangePhoto = onChangePhoto
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // User Info
                 Text(
@@ -346,22 +346,23 @@ fun ProfileCard(
                     fontSize = 14.sp
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-                // Edit Profile Button
+                // Edit Profile Button - Fixed positioning
                 Button(
                     onClick = onEditProfile,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(52.dp),
                     enabled = !isLoading,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 0.dp
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
                     )
                 ) {
                     Icon(
@@ -369,11 +370,11 @@ fun ProfileCard(
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         "Edit Profile",
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     )
                 }
             }
@@ -459,7 +460,7 @@ fun ProfileImage(
                     modifier = Modifier
                         .size(34.dp)
                         .align(Alignment.BottomEnd)
-                        .offset(x = (-2).dp, y = (-2).dp)
+                        .offset(x = (-13).dp, y = (-13).dp)
                         .shadow(
                             elevation = 6.dp,
                             shape = CircleShape
