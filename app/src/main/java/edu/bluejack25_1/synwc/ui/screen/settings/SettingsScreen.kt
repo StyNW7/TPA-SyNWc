@@ -492,7 +492,7 @@ fun ProfileImage(
                     modifier = Modifier
                         .size(34.dp)
                         .align(Alignment.BottomEnd)
-                        .offset(x = (-2).dp, y = (-2).dp)
+                        .offset(x = (-13).dp, y = (-13).dp)
                         .shadow(
                             elevation = 6.dp,
                             shape = CircleShape
