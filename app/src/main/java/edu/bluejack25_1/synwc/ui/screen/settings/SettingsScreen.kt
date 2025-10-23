@@ -804,7 +804,7 @@ fun AboutSection() {
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Text(
-                        "1.0.1",
+                        "1.0.0",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
