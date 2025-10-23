@@ -15,7 +15,7 @@ android {
         minSdk = 35
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -64,6 +64,8 @@ dependencies {
     implementation("com.cloudinary:cloudinary-android:2.4.0")
     implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation ("androidx.compose.runtime:runtime-livedata:1.5.4")
+
+    implementation("com.facebook.soloader:soloader:0.10.5")
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.database)
