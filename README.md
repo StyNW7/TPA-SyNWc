@@ -6,7 +6,7 @@
 <p align="center">
   <b>TPA Mobile Project</b>
   <br>
-  Unknown / 100 (Duration: 2 weeks)
+  95.16 / 100 (Duration: 2 weeks)
   <br>
   <b>SyNWc</b> (Sync Your Notes With Clarity) is a <b>simple self-love Android mobile app</b> built with <b>Kotlin</b> and <b>Jetpack Compose</b>, helping users to reflect, grow, and maintain daily mindfulness through personal reflections, motivational quotes, and to do tracking.
 </p>
@@ -14,7 +14,6 @@
 ---
 
 ## 📃 Table of Contents
-- [Complete Documentation](#📚-complete-documentation)
 - [Introduction](#🌟-introduction)
 - [Technology Stack](#🛠️-technology-stack)
 - [Core Features](#🧩-core-features)
@@ -23,15 +22,6 @@
 - [Screenshots](#📸-app-preview)
 - [Owner](#👥-owner)
 - [Contact](#📬-contact)
-
----
-
-## 📚 Complete Documentation
-
-<ul>
-    <li><b>Notion Documentation (Detailed Project Documentation)</b></li>
-    <a href="https://stanley-n-wijaya.notion.site/SyNWc-Documentation">SyNWc Documentation</a>
-</ul>
 
 
 ---
@@ -108,9 +98,12 @@ It offers a simple yet meaningful space to:
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Live App
 Visit the apk-debug here:  
 👉 [Download apk here](https://drive.google.com/file/d/1y8LPZPnhPcRyjFCbnIn8Fr1YL-BhB_xq/view?usp=sharing)
+
+Download the application from Play Store here:
+👉 [Download Synwc App](https://play.google.com/store/apps/details?id=edu.bluejack25_1.synwc&pcampaignid=web_share)
 
 ---
 
