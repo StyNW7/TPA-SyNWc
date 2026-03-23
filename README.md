@@ -99,10 +99,12 @@ It offers a simple yet meaningful space to:
 ---
 
 ## 🚀 Live App
-Visit the apk-debug here:  
+Visit the apk-debug here:
+<br/>
 👉 [Download apk here](https://drive.google.com/file/d/1y8LPZPnhPcRyjFCbnIn8Fr1YL-BhB_xq/view?usp=sharing)
 
 Download the application from Play Store here:
+<br/>
 👉 [Download Synwc App](https://play.google.com/store/apps/details?id=edu.bluejack25_1.synwc&pcampaignid=web_share)
 
 ---
