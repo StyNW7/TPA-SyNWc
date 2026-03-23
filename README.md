@@ -181,4 +181,4 @@ Have questions or want to collaborate?
 - 📧 Email: stanley.n.wijaya7@gmail.com
 - 💬 Discord: `stynw7`
 
-<code>Yeyy last TPA Done ❤️‍🔥 </code>
+<code>Reflect daily, grow a better you 🤍</code>
